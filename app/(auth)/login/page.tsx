@@ -3,23 +3,24 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { GraduationCap, ShieldAlert, Sparkles, UserCheck } from "lucide-react";
+import { UserCheck, ShieldAlert, Sparkles, ArrowRight, Lock, Mail } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
+  // Keep inputs empty by default as requested (no forced prefill)
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    if (!email || !password) {
+      toast.error("Please enter your email and password");
+      return;
+    }
 
+    setLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -27,7 +28,7 @@ export default function LoginPage() {
       });
 
       if (error) {
-        // For hackathon ease: If Supabase auth errors or user is demo, fallback session cookie
+        // Fallback demo authentication handler
         if (email.includes("@demo.edu") && password === "demo123") {
           const role = email.includes("admin") ? "admin" : "student";
           document.cookie = `user_role=${role}; path=/; max-age=86400`;
@@ -40,7 +41,6 @@ export default function LoginPage() {
         return;
       }
 
-      // Check role
       const { data: profile } = await supabase
         .from("students")
         .select("role")
@@ -60,93 +60,104 @@ export default function LoginPage() {
     }
   };
 
-  const quickFill = (userEmail: string, role: string) => {
-    setEmail(userEmail);
+  const setDemoCredentials = (demoEmail: string, label: string) => {
+    setEmail(demoEmail);
     setPassword("demo123");
-    toast.info(`Filled credentials for ${role}`);
+    toast.info(`Filled credentials for ${label}`);
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 p-4">
-      <div className="w-full max-w-md space-y-6">
+    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#eceef1] p-4 antialiased font-sans">
+      <div className="w-full max-w-sm space-y-6">
+        {/* Brand Header */}
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center p-3 bg-violet-600 text-white rounded-2xl shadow-lg shadow-violet-200">
-            <GraduationCap className="h-8 w-8" />
+          <div className="inline-flex items-center justify-center w-11 h-11 bg-zinc-900 text-white rounded-2xl shadow-sm mb-1">
+            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+            </svg>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">ElectiveOS</h1>
-          <p className="text-sm text-slate-500">University Elective Decision & Advising Engine</p>
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">ElectiveOS</h1>
+          <p className="text-xs text-zinc-500">University Elective Decision & Advising Engine</p>
         </div>
 
-        <Card className="border border-slate-200/80 shadow-sm bg-white">
-          <CardHeader className="space-y-1 pb-4">
-            <CardTitle className="text-xl">Sign in to your portal</CardTitle>
-            <CardDescription>Enter your university email to access choices</CardDescription>
-          </CardHeader>
-          <form onSubmit={handleLogin}>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">University Email</Label>
-                <Input
-                  id="email"
+        {/* Login Card */}
+        <div className="bg-white rounded-[26px] border border-zinc-200/90 shadow-sm p-7 space-y-5">
+          <div>
+            <h2 className="text-base font-bold text-zinc-900">Sign in to your account</h2>
+            <p className="text-xs text-zinc-500 mt-0.5">Enter your institutional credentials below</p>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-zinc-700">University Email</label>
+              <div className="relative">
+                <Mail className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
                   type="email"
-                  placeholder="student1@demo.edu"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  placeholder="student1@demo.edu"
+                  className="w-full h-9 pl-9 pr-3 text-xs bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-zinc-400 placeholder:text-zinc-400 transition-all"
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-zinc-700">Password</label>
+              <div className="relative">
+                <Lock className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
                   type="password"
-                  placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full h-9 pl-9 pr-3 text-xs bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-zinc-400 placeholder:text-zinc-400 transition-all"
                   required
                 />
               </div>
-              <Button type="submit" className="w-full bg-violet-600 hover:bg-violet-700 text-white" disabled={loading}>
-                {loading ? "Authenticating..." : "Sign In"}
-              </Button>
-            </CardContent>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full h-9 bg-zinc-900 hover:bg-black text-white text-xs font-semibold rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+            >
+              <span>{loading ? "Authenticating..." : "Sign In"}</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
           </form>
 
-          <CardFooter className="flex flex-col space-y-3 pt-2 border-t border-slate-100">
-            <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 text-center w-full">
-              Demo Quick-Fill
+          {/* Separate Demo Quick Fill Row */}
+          <div className="pt-4 border-t border-zinc-100 space-y-2">
+            <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider text-center">
+              Or Select a Demo Persona
             </div>
-            <div className="grid grid-cols-3 gap-2 w-full">
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-xs border-violet-200 hover:bg-violet-50 text-violet-700"
-                onClick={() => quickFill("student1@demo.edu", "Student 1 (Full Prereqs)")}
+            <div className="grid grid-cols-3 gap-1.5">
+              <button
+                type="button"
+                onClick={() => setDemoCredentials("student1@demo.edu", "Student 1")}
+                className="py-1.5 px-2 bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 rounded-lg text-[11px] font-semibold text-zinc-700 text-center transition-colors"
               >
-                <UserCheck className="w-3.5 h-3.5 mr-1" />
                 Student 1
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-xs border-amber-200 hover:bg-amber-50 text-amber-700"
-                onClick={() => quickFill("student2@demo.edu", "Student 2 (No ML Prereq)")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setDemoCredentials("student2@demo.edu", "Student 2")}
+                className="py-1.5 px-2 bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 rounded-lg text-[11px] font-semibold text-zinc-700 text-center transition-colors"
               >
-                <ShieldAlert className="w-3.5 h-3.5 mr-1" />
                 Student 2
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-xs border-slate-200 hover:bg-slate-100 text-slate-800"
-                onClick={() => quickFill("admin@demo.edu", "Admin Dean")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setDemoCredentials("admin@demo.edu", "Dean Admin")}
+                className="py-1.5 px-2 bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 rounded-lg text-[11px] font-semibold text-zinc-700 text-center transition-colors"
               >
-                <Sparkles className="w-3.5 h-3.5 mr-1" />
-                Admin
-              </Button>
+                Dean
+              </button>
             </div>
-          </CardFooter>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
   );

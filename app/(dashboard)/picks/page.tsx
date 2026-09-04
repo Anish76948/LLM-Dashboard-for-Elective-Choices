@@ -1,32 +1,28 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Topbar } from "@/components/topbar";
 import { getChoices, removeChoice } from "@/lib/api";
 import { Choice } from "@/lib/types";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import Link from "next/link";
 import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from "@dnd-kit/core";
-import { GripVertical, Trash2, CheckCircle2, Clock, AlertTriangle, ArrowUp, ArrowDown } from "lucide-react";
+  CheckCircle2,
+  Clock,
+  AlertTriangle,
+  ArrowUp,
+  ArrowDown,
+  Trash2,
+  Lock,
+  Sparkles,
+  Check,
+  Plus
+} from "lucide-react";
 
 export default function MyPicksPage() {
   const [items, setItems] = useState<Choice[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor)
-  );
 
   useEffect(() => {
     async function load() {
@@ -40,22 +36,6 @@ export default function MyPicksPage() {
     load();
   }, []);
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-
-    setItems((current) => {
-      const oldIndex = current.findIndex((i) => i.id === active.id);
-      const newIndex = current.findIndex((i) => i.id === over.id);
-      const newArr = [...current];
-      const [moved] = newArr.splice(oldIndex, 1);
-      newArr.splice(newIndex, 0, moved);
-      // Re-assign preference index
-      return newArr.map((item, idx) => ({ ...item, preference: idx + 1 }));
-    });
-    toast.info("Rankings reordered. Remember to submit preferences!");
-  };
-
   const moveUp = (idx: number) => {
     if (idx <= 0) return;
     setItems((current) => {
@@ -65,6 +45,7 @@ export default function MyPicksPage() {
       newArr[idx] = temp;
       return newArr.map((item, i) => ({ ...item, preference: i + 1 }));
     });
+    toast.info("Priority rank updated");
   };
 
   const moveDown = (idx: number) => {
@@ -76,6 +57,7 @@ export default function MyPicksPage() {
       newArr[idx] = temp;
       return newArr.map((item, i) => ({ ...item, preference: i + 1 }));
     });
+    toast.info("Priority rank updated");
   };
 
   const handleDelete = async (id: string, title: string) => {
@@ -87,7 +69,7 @@ export default function MyPicksPage() {
             .filter((i) => i.id !== id)
             .map((item, idx) => ({ ...item, preference: idx + 1 }))
         );
-        toast.success(`Removed ${title} from picks`);
+        toast.success(`Removed ${title}`);
       } else {
         toast.error("Failed to remove elective");
       }
@@ -100,135 +82,183 @@ export default function MyPicksPage() {
     setSubmitting(true);
     setTimeout(() => {
       setSubmitting(false);
-      toast.success("Preferences officially submitted!", {
-        description: "Your priority ranking has been locked for the current allocation round.",
+      toast.success("Preferences locked and submitted!", {
+        description: "Your priority queue order will be processed in the upcoming round.",
       });
-    }, 600);
+    }, 500);
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="flex flex-col flex-1">
+      <Topbar />
+
+      {/* Header Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">My Elective Picks</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Drag to reorder preference rankings. Allocation algorithm honors priority #1 first.
+          <div className="text-[11px] font-bold tracking-wider uppercase text-zinc-400 mb-1">
+            SELECTIONS
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">My Ranked Picks</h1>
+          <p className="text-xs text-zinc-500 mt-1 max-w-xl">
+            Arrange your preferences in descending order. The allocation algorithm fills Preference #1 first.
           </p>
         </div>
 
-        <Button
-          onClick={handleSubmit}
-          disabled={items.length === 0 || submitting}
-          className="bg-violet-600 hover:bg-violet-700 text-white font-semibold text-xs h-9 px-4"
-        >
-          {submitting ? "Saving..." : "Submit Preferences"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Link href="/browse">
+            <button className="h-9 px-3.5 bg-white border border-zinc-200 text-zinc-700 hover:bg-zinc-50 text-xs font-semibold rounded-xl shadow-xs transition-all flex items-center gap-1.5">
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add More</span>
+            </button>
+          </Link>
+          <button
+            onClick={handleSubmit}
+            disabled={items.length === 0 || submitting}
+            className="h-9 px-4 bg-zinc-900 hover:bg-black text-white text-xs font-semibold rounded-xl shadow-xs flex items-center gap-2 transition-all disabled:opacity-50"
+          >
+            <Check className="w-3.5 h-3.5" />
+            <span>{submitting ? "Locking..." : "Submit Preferences"}</span>
+          </button>
+        </div>
       </div>
 
-      <Card className="bg-white border-slate-200 shadow-sm">
-        <CardHeader className="pb-3 border-b border-slate-100">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base">Ranked Preferences ({items.length})</CardTitle>
-            <span className="text-xs text-slate-400">Order determines priority allocation</span>
-          </div>
-        </CardHeader>
-        <CardContent className="p-4 space-y-3">
-          {loading ? (
-            <div className="py-12 text-center text-xs text-slate-400">Loading your choices...</div>
-          ) : items.length === 0 ? (
-            <div className="py-12 text-center space-y-3">
-              <p className="text-sm text-slate-500">You haven't added any electives to your picks list yet.</p>
-            </div>
-          ) : (
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <div className="space-y-2.5">
-                {items.map((item, idx) => {
+      {/* Picks Ledger Table */}
+      <div className="bg-white rounded-2xl border border-zinc-200/80 shadow-xs flex-1 flex flex-col overflow-hidden">
+        <div className="px-5 py-3 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50 text-xs">
+          <span className="font-semibold text-zinc-700">Ranked Queue ({items.length} choices)</span>
+          <span className="text-zinc-400">Use arrow controls to rearrange preference order</span>
+        </div>
+
+        <div className="flex-1 overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="border-b border-zinc-100 text-zinc-400 font-semibold text-[11px]">
+                <th className="py-3 px-4 font-medium w-16 text-center">Priority</th>
+                <th className="py-3 px-4 font-medium">Course Title</th>
+                <th className="py-3 px-4 font-medium">Department</th>
+                <th className="py-3 px-4 font-medium">Time Slot</th>
+                <th className="py-3 px-4 font-medium">Credits</th>
+                <th className="py-3 px-4 font-medium">Allocation Status</th>
+                <th className="py-3 px-4 text-center font-medium w-24">Reorder</th>
+                <th className="py-3 px-5 text-right font-medium">Remove</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-100/80">
+              {loading ? (
+                <tr>
+                  <td colSpan={8} className="py-12 text-center text-zinc-400">Loading your choices...</td>
+                </tr>
+              ) : items.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-16 text-center text-zinc-400 space-y-2">
+                    <p>No electives added yet.</p>
+                    <Link href="/browse">
+                      <span className="text-xs font-semibold text-zinc-900 underline">Browse courses and add choices</span>
+                    </Link>
+                  </td>
+                </tr>
+              ) : (
+                items.map((item, idx) => {
                   let statusPill = (
-                    <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-50 text-[11px] gap-1 shrink-0">
-                      <CheckCircle2 className="w-3 h-3" /> Confirmed
-                    </Badge>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium badge-confirmed">
+                      Confirmed
+                    </span>
                   );
                   if (item.status === "waitlist") {
                     statusPill = (
-                      <Badge className="bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-50 text-[11px] gap-1 shrink-0">
-                        <Clock className="w-3 h-3" /> Waitlist
-                      </Badge>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium badge-waitlist">
+                        Waitlisted
+                      </span>
                     );
                   } else if (item.status === "blocked") {
                     statusPill = (
-                      <Badge className="bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-50 text-[11px] gap-1 shrink-0">
-                        <AlertTriangle className="w-3 h-3" /> Blocked
-                      </Badge>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium badge-blocked">
+                        Blocked
+                      </span>
                     );
                   }
 
                   return (
-                    <div
-                      key={item.id}
-                      className="flex items-center justify-between p-3.5 bg-white border border-slate-200 rounded-xl hover:border-violet-300 transition-colors gap-4"
-                    >
-                      {/* Left Grip & Preference Rank */}
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="flex flex-col items-center gap-1 text-slate-400">
+                    <tr key={item.id} className="hover:bg-zinc-50/70 transition-colors">
+                      {/* Priority Number */}
+                      <td className="py-3 px-4 text-center">
+                        <span className="inline-flex w-7 h-7 rounded-lg bg-zinc-900 text-white font-bold text-xs items-center justify-center shadow-xs">
+                          {item.preference}
+                        </span>
+                      </td>
+
+                      {/* Course Title */}
+                      <td className="py-3 px-4">
+                        <div className="font-semibold text-zinc-900 leading-snug">
+                          {item.elective.title}
+                        </div>
+                        {item.reason && (
+                          <div className="text-[10px] text-red-600 font-medium mt-0.5">
+                            ⚠️ {item.reason}
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Department */}
+                      <td className="py-3 px-4 text-zinc-600">
+                        {item.elective.dept}
+                      </td>
+
+                      {/* Schedule */}
+                      <td className="py-3 px-4 text-zinc-600 whitespace-nowrap">
+                        {item.elective.day}, {item.elective.start}–{item.elective.end}
+                      </td>
+
+                      {/* Credits */}
+                      <td className="py-3 px-4 font-mono text-zinc-700">
+                        {item.elective.credits} cr
+                      </td>
+
+                      {/* Status */}
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        {statusPill}
+                      </td>
+
+                      {/* Reorder Buttons */}
+                      <td className="py-3 px-4 text-center">
+                        <div className="inline-flex items-center gap-1 bg-zinc-100 p-0.5 rounded-lg">
                           <button
                             onClick={() => moveUp(idx)}
                             disabled={idx === 0}
-                            className="hover:text-slate-700 disabled:opacity-20"
+                            className="p-1 hover:bg-white rounded text-zinc-600 disabled:opacity-20 transition-colors"
+                            title="Move Up"
                           >
                             <ArrowUp className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => moveDown(idx)}
                             disabled={idx === items.length - 1}
-                            className="hover:text-slate-700 disabled:opacity-20"
+                            className="p-1 hover:bg-white rounded text-zinc-600 disabled:opacity-20 transition-colors"
+                            title="Move Down"
                           >
                             <ArrowDown className="w-3.5 h-3.5" />
                           </button>
                         </div>
+                      </td>
 
-                        <div className="w-8 h-8 rounded-lg bg-violet-100 text-violet-700 font-bold text-sm flex items-center justify-center shrink-0">
-                          {item.preference}
-                        </div>
-
-                        <div className="truncate">
-                          <div className="text-sm font-semibold text-slate-900 truncate">
-                            {item.elective.title}
-                          </div>
-                          <div className="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
-                            <span className="font-medium text-slate-600">{item.elective.dept}</span>
-                            <span>•</span>
-                            <span>{item.elective.credits} Credits</span>
-                            <span>•</span>
-                            <span>{item.elective.day} {item.elective.start}-{item.elective.end}</span>
-                          </div>
-                          {item.reason && (
-                            <div className="text-[11px] text-rose-600 mt-1 font-medium">
-                              ⚠️ {item.reason}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Right Status Pill & Delete Button */}
-                      <div className="flex items-center gap-3 shrink-0">
-                        {statusPill}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                      {/* Delete */}
+                      <td className="py-3 px-5 text-right">
+                        <button
                           onClick={() => handleDelete(item.id, item.elective.title)}
+                          className="p-1.5 text-zinc-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Remove"
                         >
                           <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
+                        </button>
+                      </td>
+                    </tr>
                   );
-                })}
-              </div>
-            </DndContext>
-          )}
-        </CardContent>
-      </Card>
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }

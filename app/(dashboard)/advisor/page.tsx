@@ -1,27 +1,43 @@
 "use client";
 
 import { useState } from "react";
+import { Topbar } from "@/components/topbar";
 import { askAdvisor, getElectives, addChoice } from "@/lib/api";
-import { AdvisorResponse, Elective } from "@/lib/types";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
+import { AdvisorResponse } from "@/lib/types";
 import { toast } from "sonner";
-import { Sparkles, Send, CheckCircle, AlertOctagon, Plus, Layers, Bot } from "lucide-react";
+import {
+  Sparkles,
+  Send,
+  CheckCircle2,
+  AlertOctagon,
+  Plus,
+  Layers,
+  Bot,
+  BrainCircuit,
+  Lock,
+  ArrowRight,
+  Compass,
+  Check
+} from "lucide-react";
 
 export default function AdvisorPage() {
-  const [goal, setGoal] = useState("I want to become an AI & Machine Learning Research Engineer");
-  const [interestsText, setInterestsText] = useState("Neural Networks, Large Language Models, Distributed Systems");
+  const [goal, setGoal] = useState("");
+  const [interestsText, setInterestsText] = useState("");
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<AdvisorResponse | null>(null);
   const [addedCourses, setAddedCourses] = useState<Set<string>>(new Set());
 
+  // Demo presets (separate buttons so inputs are NOT prefilled by default)
+  const loadScenario = (targetGoal: string, targetInterests: string) => {
+    setGoal(targetGoal);
+    setInterestsText(targetInterests);
+    toast.info("Loaded demo scenario into fields");
+  };
+
   const handleConsult = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!goal.trim()) {
-      toast.error("Please specify your career goal");
+      toast.error("Please enter your career goal or target industry");
       return;
     }
 
@@ -30,7 +46,7 @@ export default function AdvisorPage() {
       const interests = interestsText.split(",").map((s) => s.trim()).filter(Boolean);
       const res = await askAdvisor(goal, interests);
       setResponse(res);
-      toast.success("AI Advisor generated recommendations!");
+      toast.success("MiniMax M3 evaluated catalog & prerequisites!");
     } catch (err: any) {
       toast.error(err.message || "Failed to reach AI advisor");
     } finally {
@@ -43,7 +59,7 @@ export default function AdvisorPage() {
       const electives = await getElectives();
       const match = electives.find((e) => e.title.toLowerCase() === courseTitle.toLowerCase());
       if (!match) {
-        toast.error(`Could not locate course "${courseTitle}" in database`);
+        toast.error(`Course "${courseTitle}" not found in database`);
         return;
       }
       const res = await addChoice(match.id, 99);
@@ -52,7 +68,7 @@ export default function AdvisorPage() {
         return;
       }
       setAddedCourses((prev) => new Set([...prev, courseTitle]));
-      toast.success(`Added ${courseTitle} to picks!`);
+      toast.success(`Added ${courseTitle} to your ranked picks!`);
     } catch (e: any) {
       toast.error(e.message || "Failed to add pick");
     }
@@ -63,170 +79,220 @@ export default function AdvisorPage() {
     for (const rec of response.recommendations) {
       await handleAddSingle(rec.elective);
     }
-    toast.success("All recommended electives added to your picks!");
+    toast.success("All recommended electives added to picks!");
   };
 
   return (
-    <div className="space-y-8 max-w-4xl mx-auto">
-      {/* Header */}
-      <div>
-        <div className="flex items-center gap-2 text-violet-600 font-semibold text-xs uppercase tracking-wider">
-          <Sparkles className="w-4 h-4" /> Powered by MiniMax M3
+    <div className="flex flex-col flex-1">
+      <Topbar />
+
+      {/* Header Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+        <div>
+          <div className="text-[11px] font-bold tracking-wider uppercase text-zinc-400 mb-1">
+            INTELLIGENCE
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">AI Academic Advisor</h1>
+          <p className="text-xs text-zinc-500 mt-1 max-w-xl">
+            Powered by <strong>MiniMax M3</strong> via OpenRouter. Real-time prerequisite mapping, transcript alignment, and admission likelihood scoring.
+          </p>
         </div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900 mt-1">AI Academic Advisor</h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Tell the advisor your career ambitions and interests. The model matches electives, checks prerequisites, and projects seat probability.
-        </p>
+
+        {response && response.recommendations.length > 0 && (
+          <button
+            onClick={handleAddAll}
+            className="h-9 px-4 bg-zinc-900 hover:bg-black text-white text-xs font-semibold rounded-xl shadow-xs flex items-center gap-2 transition-all shrink-0"
+          >
+            <Layers className="w-3.5 h-3.5" />
+            <span>Add All Recommendations</span>
+          </button>
+        )}
       </div>
 
-      {/* Input Card */}
-      <Card className="bg-white border-slate-200 shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Bot className="w-4 h-4 text-violet-600" /> Career & Academic Focus
-          </CardTitle>
-          <CardDescription className="text-xs">
-            Inputs are treated strictly as untrusted data under our prompt-injection defense pipeline.
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={handleConsult}>
-          <CardContent className="space-y-4">
+      {/* Input Consultation Card (Clean, un-prefilled by default) */}
+      <div className="bg-white rounded-2xl border border-zinc-200/80 p-6 shadow-xs mb-6 space-y-4">
+        {/* Separate Demo Scenario Chips */}
+        <div className="flex items-center justify-between pb-3 border-b border-zinc-100 flex-wrap gap-2">
+          <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+            <Compass className="w-3.5 h-3.5 text-zinc-400" />
+            <span>Demo Scenarios (Optional 1-Click Fill)</span>
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => loadScenario("AI Research Engineer focusing on LLMs and Neural Architectures", "Deep Learning, PyTorch, Natural Language Processing")}
+              className="px-2.5 py-1 text-[11px] font-medium bg-zinc-100 text-zinc-700 hover:bg-zinc-200/80 rounded-lg transition-colors"
+            >
+              AI Engineer
+            </button>
+            <button
+              type="button"
+              onClick={() => loadScenario("Cloud Systems Architect and DevOps Engineer", "Kubernetes, Distributed Systems, Microservices")}
+              className="px-2.5 py-1 text-[11px] font-medium bg-zinc-100 text-zinc-700 hover:bg-zinc-200/80 rounded-lg transition-colors"
+            >
+              Cloud Architect
+            </button>
+            <button
+              type="button"
+              onClick={() => loadScenario("Tech Product Manager at high-growth SaaS startup", "Product Strategy, Growth, Behavioral Economics")}
+              className="px-2.5 py-1 text-[11px] font-medium bg-zinc-100 text-zinc-700 hover:bg-zinc-200/80 rounded-lg transition-colors"
+            >
+              Product Lead
+            </button>
+          </div>
+        </div>
+
+        <form onSubmit={handleConsult} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">Career Goal / Target Role</label>
-              <Input
+              <label className="text-xs font-semibold text-zinc-700">
+                Career Goal or Target Role
+              </label>
+              <input
+                type="text"
                 value={goal}
                 onChange={(e) => setGoal(e.target.value)}
-                placeholder="e.g., Lead Data Scientist in Quantitative Finance"
-                className="bg-slate-50 text-sm"
+                placeholder="e.g. Lead Machine Learning Engineer or Quantitative Analyst"
+                className="w-full h-9 px-3 text-xs bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-zinc-400 placeholder:text-zinc-400 transition-all"
                 required
               />
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">Technical Interests (comma separated)</label>
-              <Input
+              <label className="text-xs font-semibold text-zinc-700">
+                Key Technical Interests (comma separated)
+              </label>
+              <input
+                type="text"
                 value={interestsText}
                 onChange={(e) => setInterestsText(e.target.value)}
-                placeholder="e.g., Deep Learning, Distributed Cloud, Blockchain"
-                className="bg-slate-50 text-sm"
+                placeholder="e.g. Deep Learning, Distributed Cloud, Systems"
+                className="w-full h-9 px-3 text-xs bg-zinc-50 border border-zinc-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-zinc-400 placeholder:text-zinc-400 transition-all"
               />
             </div>
-
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-violet-600 hover:bg-violet-700 text-white font-semibold text-xs h-10 shadow-sm"
-            >
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 animate-spin" /> Evaluating Course Catalog & Prerequisites...
-                </span>
-              ) : (
-                <span className="flex items-center gap-2">
-                  <Send className="w-3.5 h-3.5" /> Consult Advisor Engine
-                </span>
-              )}
-            </Button>
-          </CardContent>
-        </form>
-      </Card>
-
-      {/* Recommendations Output */}
-      {response && (
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 text-emerald-600" /> Recommended Electives ({response.recommendations.length})
-            </h3>
-            {response.recommendations.length > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleAddAll}
-                className="text-xs border-violet-200 text-violet-700 hover:bg-violet-50 font-semibold"
-              >
-                <Layers className="w-3.5 h-3.5 mr-1.5" /> Add All to Picks
-              </Button>
-            )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex items-center justify-between pt-2">
+            <span className="text-[11px] text-zinc-400">
+              Prompt-injection guard enabled • Strict JSON schema output
+            </span>
+            <button
+              type="submit"
+              disabled={loading}
+              className="h-9 px-5 bg-zinc-900 hover:bg-black text-white text-xs font-semibold rounded-xl shadow-xs flex items-center gap-2 transition-all disabled:opacity-50"
+            >
+              {loading ? (
+                <>
+                  <Sparkles className="w-3.5 h-3.5 animate-spin text-purple-300" />
+                  <span>Evaluating Courses via MiniMax M3...</span>
+                </>
+              ) : (
+                <>
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Consult AI Advisor</span>
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* Advisor Recommendations Output */}
+      {response && (
+        <div className="space-y-5 animate-fade-in-up">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-zinc-900 flex items-center gap-2">
+              <BrainCircuit className="w-4 h-4 text-purple-600" />
+              <span>Recommended Course Allocations ({response.recommendations.length})</span>
+            </h3>
+            <span className="text-xs text-zinc-400">Ranked by career syllabus synergy</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {response.recommendations.map((rec, i) => {
               const added = addedCourses.has(rec.elective);
               return (
-                <Card
+                <div
                   key={i}
-                  className="bg-white border-slate-200 shadow-sm hover:border-violet-300 transition-all flex flex-col justify-between"
+                  className="bg-white rounded-2xl border border-zinc-200/80 p-5 shadow-xs flex flex-col justify-between hover:border-zinc-300 transition-all group"
                 >
-                  <CardHeader className="pb-2 space-y-1">
+                  <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <Badge className="bg-violet-50 text-violet-700 border-violet-200 font-bold text-xs">
-                        {rec.match_score}% Match
-                      </Badge>
-                      <span className="text-[11px] text-slate-400 font-medium">
-                        Seat Chance: {rec.seat_chance}%
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold badge-confirmed">
+                        {rec.match_score}% Synergy
+                      </span>
+                      <span className="text-[11px] text-zinc-400 font-mono">
+                        Seat Likelihood: {rec.seat_chance}%
                       </span>
                     </div>
-                    <CardTitle className="text-sm font-bold text-slate-900 pt-1 leading-snug">
-                      {rec.elective}
-                    </CardTitle>
-                  </CardHeader>
 
-                  <CardContent className="space-y-3 text-xs text-slate-600">
-                    <p className="text-slate-500 leading-relaxed italic bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                    <h4 className="text-sm font-bold text-zinc-900 group-hover:text-black leading-snug">
+                      {rec.elective}
+                    </h4>
+
+                    <p className="text-xs text-zinc-500 leading-relaxed bg-zinc-50 p-3 rounded-xl border border-zinc-100">
                       "{rec.reason}"
                     </p>
 
                     <div className="space-y-1">
-                      <div className="flex items-center justify-between text-[11px] text-slate-500">
-                        <span>Admission Likelihood</span>
-                        <span className="font-semibold text-violet-700">{rec.seat_chance}%</span>
+                      <div className="flex items-center justify-between text-[11px] text-zinc-400">
+                        <span>Seat probability</span>
+                        <span className="font-semibold text-zinc-700">{rec.seat_chance}%</span>
                       </div>
-                      <Progress value={rec.seat_chance} className="h-1.5 [&>div]:bg-violet-600" />
+                      <div className="h-1.5 w-full bg-zinc-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-zinc-900 rounded-full transition-all duration-500"
+                          style={{ width: `${rec.seat_chance}%` }}
+                        />
+                      </div>
                     </div>
-                  </CardContent>
+                  </div>
 
-                  <div className="p-3 pt-0 border-t border-slate-100 mt-2">
-                    <Button
-                      size="sm"
+                  <div className="pt-4 border-t border-zinc-100 mt-4">
+                    <button
                       onClick={() => handleAddSingle(rec.elective)}
                       disabled={added}
-                      className={`w-full text-xs font-semibold h-8 ${
+                      className={`w-full h-8 text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-all ${
                         added
-                          ? "bg-slate-100 text-slate-500 border border-slate-200"
-                          : "bg-violet-600 hover:bg-violet-700 text-white"
+                          ? "bg-zinc-100 text-zinc-400 cursor-default"
+                          : "bg-zinc-900 hover:bg-black text-white shadow-xs"
                       }`}
                     >
                       {added ? (
-                        <span className="flex items-center gap-1.5">
-                          <CheckCircle className="w-3.5 h-3.5 text-emerald-600" /> Added to Picks
-                        </span>
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Added to Picks</span>
+                        </>
                       ) : (
-                        <span className="flex items-center gap-1.5">
-                          <Plus className="w-3.5 h-3.5" /> Add to My Picks
-                        </span>
+                        <>
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Add to My Picks</span>
+                        </>
                       )}
-                    </Button>
+                    </button>
                   </div>
-                </Card>
+                </div>
               );
             })}
           </div>
 
-          {/* Rejected Items (Prerequisite Blockers) */}
+          {/* Rejected Prerequisite Blockers */}
           {response.rejected && response.rejected.length > 0 && (
-            <div className="space-y-3 pt-4 border-t border-slate-200">
-              <h4 className="text-xs font-bold text-rose-800 uppercase tracking-wider flex items-center gap-1.5">
-                <AlertOctagon className="w-3.5 h-3.5 text-rose-600" /> Ineligible / Prerequisite Blocked
-              </h4>
+            <div className="bg-red-50/60 border border-red-200/80 rounded-2xl p-5 space-y-3 mt-4">
+              <div className="flex items-center gap-2 text-xs font-bold text-red-800 uppercase tracking-wider">
+                <AlertOctagon className="w-4 h-4 text-red-600" />
+                <span>Prerequisite Blocked Electives</span>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {response.rejected.map((rej, idx) => (
                   <div
                     key={idx}
-                    className="p-3 bg-rose-50 border border-rose-200 rounded-xl space-y-1 text-xs"
+                    className="p-3 bg-white rounded-xl border border-red-200 shadow-xs space-y-1"
                   >
-                    <div className="font-bold text-rose-900">{rej.elective}</div>
-                    <div className="text-rose-700 text-[11px]">{rej.reason}</div>
+                    <div className="text-xs font-bold text-zinc-900">{rej.elective}</div>
+                    <div className="text-[11px] text-red-600 font-medium">
+                      ⚠️ {rej.reason}
+                    </div>
                   </div>
                 ))}
               </div>
