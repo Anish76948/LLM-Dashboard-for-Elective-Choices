@@ -202,10 +202,12 @@ Rules:
     return { reply: replyText, suggestedElectives: suggested.slice(0, 3) };
   } catch (err: any) {
     console.error("Chat advisor fallback:", err.message);
-    const firstMatch = catalog.find((c) => !c.prereqs.some((p) => !completedCourses.includes(p))) || catalog[0];
+    const firstMatch = catalog.find((c) => !c.prereqs?.some((p) => !completedCourses.includes(p))) || catalog[0];
+    const electiveTitle = firstMatch?.title || "Deep Learning & Neural Networks";
+    const electiveDept = firstMatch?.dept || "Computer Science";
     return {
-      reply: `Based on your academic profile, I recommend exploring **${firstMatch.title}** (${firstMatch.dept}). It provides strong foundational depth while fitting cleanly within your schedule!`,
-      suggestedElectives: [firstMatch],
+      reply: `Based on your academic profile, I recommend exploring **${electiveTitle}** (${electiveDept}). It provides strong foundational depth while fitting cleanly within your schedule!`,
+      suggestedElectives: firstMatch ? [firstMatch] : [],
     };
   }
 }

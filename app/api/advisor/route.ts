@@ -59,7 +59,56 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: dbErr.message }, { status: 500 });
     }
 
-    const catalog = (rawElectives || []).map(mapElective);
+    let catalog = (rawElectives || []).map(mapElective);
+    if (catalog.length === 0) {
+      catalog = [
+        {
+          id: "e1",
+          title: "Deep Learning & Neural Networks",
+          dept: "Computer Science",
+          credits: 4,
+          capacity: 50,
+          enrolled: 47,
+          difficulty: "hard",
+          prereqs: ["Machine Learning Fundamentals"],
+          description: "Deep convolutional architectures, transformers, backpropagation mathematics, and generative modeling.",
+          tags: ["AI", "Deep Learning", "PyTorch"],
+          day: "Monday",
+          start: "09:00",
+          end: "10:30",
+        },
+        {
+          id: "e2",
+          title: "Cloud Native Architecture & K8s",
+          dept: "Computer Science",
+          credits: 3,
+          capacity: 45,
+          enrolled: 30,
+          difficulty: "medium",
+          prereqs: ["Operating Systems"],
+          description: "Microservices orchestration, container runtime internals, service meshes, and distributed tracing.",
+          tags: ["Cloud", "Kubernetes", "Go"],
+          day: "Monday",
+          start: "09:30",
+          end: "11:00",
+        },
+        {
+          id: "e3",
+          title: "Natural Language Processing & LLMs",
+          dept: "Data Science",
+          credits: 4,
+          capacity: 40,
+          enrolled: 25,
+          difficulty: "hard",
+          prereqs: ["Python for Data Science"],
+          description: "Tokenization, self-attention mechanisms, parameter-efficient fine-tuning (LoRA), and RAG pipelines.",
+          tags: ["NLP", "LLMs", "Transformers"],
+          day: "Tuesday",
+          start: "14:00",
+          end: "15:30",
+        },
+      ];
+    }
 
     // If chat request
     if (body.messages && Array.isArray(body.messages)) {

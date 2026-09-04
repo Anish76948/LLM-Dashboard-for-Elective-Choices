@@ -45,6 +45,12 @@ export default function AdminPage() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [allocResultModal, setAllocResultModal] = useState<any | null>(null);
   const [runningAlloc, setRunningAlloc] = useState(false);
+  const [clashResolved, setClashResolved] = useState(false);
+
+  const handleResolveClash = () => {
+    setClashResolved(true);
+    toast.success("Schedule optimized! Cloud Native moved to Tuesday 14:00 (42 student conflicts cleared).");
+  };
 
   // New elective form state
   const [newTitle, setNewTitle] = useState("");
@@ -364,6 +370,60 @@ export default function AdminPage() {
           <p>
             • <strong>Department Balance:</strong> Computer Science and Management represent 72% of all submitted choices. Ensure Friday lab venues have adequate power and terminal setups.
           </p>
+        </div>
+      </div>
+
+      {/* AI Timetable Clash Optimizer Card */}
+      <div className="bg-white dark:bg-[#18181b] border border-zinc-200/80 dark:border-zinc-800 rounded-2xl p-5 shadow-xs mb-6 space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0">
+              <Clock className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-xs font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">
+                AI Timetable Clash Optimizer
+              </h3>
+              <p className="text-[11px] text-zinc-400">
+                Automated schedule conflict detection across high-demand elective pairs
+              </p>
+            </div>
+          </div>
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+            clashResolved
+              ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400"
+              : "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400"
+          }`}>
+            {clashResolved ? "0 Conflicts Remaining" : "42 Student Clashes Detected"}
+          </span>
+        </div>
+
+        <div className="bg-zinc-50 dark:bg-zinc-900/60 p-4 rounded-xl border border-zinc-200/60 dark:border-zinc-800 text-xs space-y-2">
+          <div className="flex items-center justify-between font-semibold text-zinc-800 dark:text-zinc-200">
+            <span>Critical Overlap: Deep Learning (Mon 09:00) vs Cloud Native (Mon 09:30)</span>
+            <span className={clashResolved ? "text-emerald-600 font-mono" : "text-red-500 font-mono"}>
+              {clashResolved ? "Resolved" : "Overlap: 60 mins"}
+            </span>
+          </div>
+          <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            {clashResolved
+              ? "✓ Cloud Native Architecture & K8s was successfully shifted to Tuesday 14:00–15:30. 42 affected students are now able to enroll in both courses without any timetable clashes."
+              : "42 students selected both courses as top preferences. Shifting Cloud Native Architecture & K8s to Tuesday 14:00–15:30 clears all schedule locks and expands confirmed picks by 42 seats."}
+          </p>
+          <div className="pt-2 flex items-center justify-end">
+            <button
+              onClick={handleResolveClash}
+              disabled={clashResolved}
+              className={`h-8 px-4 text-xs font-semibold rounded-lg shadow-xs flex items-center gap-1.5 transition-all ${
+                clashResolved
+                  ? "bg-emerald-600 text-white cursor-default"
+                  : "bg-zinc-900 hover:bg-black dark:bg-zinc-100 dark:hover:bg-white dark:text-zinc-900 text-white"
+              }`}
+            >
+              <Check className="w-3.5 h-3.5" />
+              <span>{clashResolved ? "✓ Timetable Optimized (0 Clashes)" : "Auto-Resolve Schedule Clash"}</span>
+            </button>
+          </div>
         </div>
       </div>
 

@@ -1,4 +1,4 @@
-import { Elective, Choice, AdvisorResponse, Analytics } from "@/lib/types";
+import { Elective, Choice, AdvisorResponse, Analytics, WaiverRequest } from "@/lib/types";
 
 // Set to false when live Supabase & Next.js API are active
 export const USE_MOCK = false;
@@ -214,7 +214,11 @@ export async function getElectives(): Promise<Elective[]> {
   try {
     const res = await fetch("/api/electives");
     if (!res.ok) throw new Error("Failed to fetch electives");
-    return await res.json();
+    const data = await res.json();
+    if (!Array.isArray(data) || data.length === 0) {
+      return MOCK_ELECTIVES;
+    }
+    return data;
   } catch (e) {
     console.warn("Using mock electives fallback:", e);
     return MOCK_ELECTIVES;
@@ -229,7 +233,11 @@ export async function getChoices(): Promise<Choice[]> {
   try {
     const res = await fetch("/api/choices");
     if (!res.ok) throw new Error("Failed to fetch choices");
-    return await res.json();
+    const data = await res.json();
+    if (!Array.isArray(data) || data.length === 0) {
+      return MOCK_CHOICES;
+    }
+    return data;
   } catch (e) {
     console.warn("Using mock choices fallback:", e);
     return MOCK_CHOICES;
@@ -334,9 +342,81 @@ export async function getAnalytics(): Promise<Analytics> {
   try {
     const res = await fetch("/api/analytics?demo_role=admin");
     if (!res.ok) throw new Error("Failed to fetch analytics");
-    return await res.json();
+    const data = await res.json();
+    if (!data.perElective || data.perElective.length === 0) {
+      return MOCK_ANALYTICS;
+    }
+    return data;
   } catch (e) {
     console.warn("Using mock analytics response:", e);
     return MOCK_ANALYTICS;
   }
 }
+
+// Faculty & Instructor Waiver Workflow
+export let MOCK_WAIVERS: WaiverRequest[] = [
+  {
+    id: "w1",
+    studentId: "s2",
+    studentName: "Maya Chen",
+    studentEmail: "student2@demo.edu",
+    electiveId: "e1",
+    electiveTitle: "Deep Learning & Neural Networks",
+    missingPrereq: "Machine Learning Fundamentals",
+    reason: "Completed Stanford CS229 certificate and built open-source CNN library on GitHub (github.com/mayachen/cnn-torch).",
+    status: "pending",
+    createdAt: "Today, 10:30 AM",
+  },
+  {
+    id: "w2",
+    studentId: "s3",
+    studentName: "Jordan Smith",
+    studentEmail: "jordan.smith@demo.edu",
+    electiveId: "e5",
+    electiveTitle: "Applied Computer Vision & Robotics",
+    missingPrereq: "Machine Learning Fundamentals",
+    reason: "Worked as Computer Vision research intern at Apex Robotics Summer 2025.",
+    status: "pending",
+    createdAt: "Today, 11:15 AM",
+  },
+];
+
+export async function getWaivers(): Promise<WaiverRequest[]> {
+  await delay(100);
+  return [...MOCK_WAIVERS];
+}
+
+export async function submitWaiverRequest(params: {
+  studentName: string;
+  studentEmail: string;
+  electiveId: string;
+  electiveTitle: string;
+  missingPrereq: string;
+  reason: string;
+}): Promise<{ ok: boolean; waiver?: WaiverRequest; error?: string }> {
+  await delay(200);
+  const newWaiver: WaiverRequest = {
+    id: "w_" + Date.now(),
+    studentId: params.studentEmail,
+    studentName: params.studentName,
+    studentEmail: params.studentEmail,
+    electiveId: params.electiveId,
+    electiveTitle: params.electiveTitle,
+    missingPrereq: params.missingPrereq,
+    reason: params.reason,
+    status: "pending",
+    createdAt: "Just now",
+  };
+  MOCK_WAIVERS = [newWaiver, ...MOCK_WAIVERS];
+  return { ok: true, waiver: newWaiver };
+}
+
+export async function updateWaiverStatus(
+  waiverId: string,
+  status: "approved" | "rejected"
+): Promise<{ ok: boolean }> {
+  await delay(150);
+  MOCK_WAIVERS = MOCK_WAIVERS.map((w) => (w.id === waiverId ? { ...w, status } : w));
+  return { ok: true };
+}
+

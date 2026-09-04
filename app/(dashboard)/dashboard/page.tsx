@@ -5,14 +5,30 @@ import Link from "next/link";
 import { Topbar } from "@/components/topbar";
 import { getElectives, getChoices } from "@/lib/api";
 import { Elective, Choice } from "@/lib/types";
-import { Calendar, CheckCircle2, FileText, ArrowRight, MoreHorizontal, Sparkles, Clock, Check, AlertTriangle, Layers } from "lucide-react";
+import {
+  Calendar,
+  CheckCircle2,
+  FileText,
+  ArrowRight,
+  MoreHorizontal,
+  Sparkles,
+  ShieldCheck,
+  Check,
+  AlertTriangle,
+  Clock,
+  GraduationCap
+} from "lucide-react";
 
 export default function DashboardPage() {
   const [electives, setElectives] = useState<Elective[]>([]);
   const [choices, setChoices] = useState<Choice[]>([]);
   const [loading, setLoading] = useState(true);
+  const [role, setRole] = useState("student");
 
   useEffect(() => {
+    const roleMatch = document.cookie.match(/user_role=([^;]+)/);
+    if (roleMatch) setRole(roleMatch[1]);
+
     async function loadData() {
       try {
         const [eData, cData] = await Promise.all([getElectives(), getChoices()]);
@@ -34,99 +50,151 @@ export default function DashboardPage() {
     <div className="flex flex-col flex-1">
       <Topbar />
 
+      {/* Admin Quick Banner (Visible when admin is logged in) */}
+      {role === "admin" && (
+        <div className="mb-6 p-4 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-between gap-4 animate-fade-in-up">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-purple-500/20 text-purple-700 dark:text-purple-300">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                Academic Administration Mode Active
+              </div>
+              <div className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                You have administrative authority to provision new electives, expand course seat caps, and execute allocation rounds.
+              </div>
+            </div>
+          </div>
+          <Link href="/admin">
+            <button className="h-8 px-3 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold rounded-lg shadow-xs flex items-center gap-1.5 transition-all shrink-0">
+              <span>Open Allocations Ledger</span>
+              <ArrowRight className="w-3 h-3" />
+            </button>
+          </Link>
+        </div>
+      )}
+
+      {/* Faculty Quick Banner (Visible when faculty is logged in) */}
+      {role === "faculty" && (
+        <div className="mb-6 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between gap-4 animate-fade-in-up">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+              <GraduationCap className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                Instructor Mode Active
+              </div>
+              <div className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                You are logged in as course faculty. Review student prerequisite waiver requests and course rosters.
+              </div>
+            </div>
+          </div>
+          <Link href="/faculty">
+            <button className="h-8 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-xs flex items-center gap-1.5 transition-all shrink-0">
+              <span>Open Instructor Portal</span>
+              <ArrowRight className="w-3 h-3" />
+            </button>
+          </Link>
+        </div>
+      )}
+
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
         <div>
           <div className="text-[11px] font-bold tracking-wider uppercase text-zinc-400 mb-1">
             PORTAL OVERVIEW
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Student Dashboard</h1>
-          <p className="text-xs text-zinc-500 mt-1 max-w-xl">
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+            {role === "admin" ? "Administrative Overview" : role === "faculty" ? "Faculty Overview" : "Student Dashboard"}
+          </h1>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-xl">
             Live allocations ledger, course capacity metrics, and active student preference rankings.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <Link href="/browse">
-            <button className="h-9 px-3.5 bg-white border border-zinc-200 text-zinc-700 hover:bg-zinc-50 text-xs font-semibold rounded-xl shadow-xs transition-all">
+            <button className="h-9 px-3.5 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700/80 text-xs font-semibold rounded-xl shadow-xs transition-all">
               Browse All
             </button>
           </Link>
           <Link href="/advisor">
-            <button className="h-9 px-4 bg-zinc-900 hover:bg-black text-white text-xs font-semibold rounded-xl shadow-xs flex items-center gap-2 transition-all">
-              <Sparkles className="w-3.5 h-3.5 text-purple-300" />
+            <button className="h-9 px-4 bg-zinc-900 hover:bg-black dark:bg-zinc-100 dark:hover:bg-white dark:text-zinc-900 text-white text-xs font-semibold rounded-xl shadow-xs flex items-center gap-2 transition-all">
+              <Sparkles className="w-3.5 h-3.5 text-purple-300 dark:text-purple-600" />
               <span>Ask Advisor</span>
             </button>
           </Link>
         </div>
       </div>
 
-      {/* 3 Summary Stat Cards (Exact match to screenshot) */}
+      {/* 3 Summary Stat Cards (Full dark/light mode) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-2xl border border-zinc-200/80 p-5 shadow-xs flex flex-col justify-between hover:border-zinc-300 transition-all">
+        <div className="bg-white dark:bg-[#18181b] rounded-2xl border border-zinc-200/80 dark:border-zinc-800 p-5 shadow-xs flex flex-col justify-between hover:border-zinc-300 dark:hover:border-zinc-700 transition-all">
           <div className="flex items-center justify-between text-zinc-400 mb-3">
-            <div className="flex items-center gap-2 text-[11px] font-bold tracking-wider uppercase text-zinc-500">
+            <div className="flex items-center gap-2 text-[11px] font-bold tracking-wider uppercase text-zinc-500 dark:text-zinc-400">
               <Calendar className="w-4 h-4 text-zinc-400" />
               <span>REMAINING SEATS</span>
             </div>
             <MoreHorizontal className="w-4 h-4 text-zinc-400" />
           </div>
           <div>
-            <div className="text-2xl font-bold tracking-tight text-zinc-900">
+            <div className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
               {loading ? "..." : `${seatsLeft} Seats`}
             </div>
-            <div className="text-xs text-zinc-400 mt-1">
+            <div className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
               {totalEnrolled} students allocated across courses
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-zinc-200/80 p-5 shadow-xs flex flex-col justify-between hover:border-zinc-300 transition-all">
+        <div className="bg-white dark:bg-[#18181b] rounded-2xl border border-zinc-200/80 dark:border-zinc-800 p-5 shadow-xs flex flex-col justify-between hover:border-zinc-300 dark:hover:border-zinc-700 transition-all">
           <div className="flex items-center justify-between text-zinc-400 mb-3">
-            <div className="flex items-center gap-2 text-[11px] font-bold tracking-wider uppercase text-zinc-500">
+            <div className="flex items-center gap-2 text-[11px] font-bold tracking-wider uppercase text-zinc-500 dark:text-zinc-400">
               <CheckCircle2 className="w-4 h-4 text-emerald-600" />
               <span>CONFIRMED PICKS</span>
             </div>
             <MoreHorizontal className="w-4 h-4 text-zinc-400" />
           </div>
           <div>
-            <div className="text-2xl font-bold tracking-tight text-zinc-900">
+            <div className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
               {loading ? "..." : `${confirmedPicks.length} Allocated`}
             </div>
-            <div className="text-xs text-zinc-400 mt-1">
+            <div className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
               88% admission confidence on preference #1
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-zinc-200/80 p-5 shadow-xs flex flex-col justify-between hover:border-zinc-300 transition-all">
+        <div className="bg-white dark:bg-[#18181b] rounded-2xl border border-zinc-200/80 dark:border-zinc-800 p-5 shadow-xs flex flex-col justify-between hover:border-zinc-300 dark:hover:border-zinc-700 transition-all">
           <div className="flex items-center justify-between text-zinc-400 mb-3">
-            <div className="flex items-center gap-2 text-[11px] font-bold tracking-wider uppercase text-zinc-500">
+            <div className="flex items-center gap-2 text-[11px] font-bold tracking-wider uppercase text-zinc-500 dark:text-zinc-400">
               <FileText className="w-4 h-4 text-amber-500" />
               <span>DEADLINE</span>
             </div>
             <MoreHorizontal className="w-4 h-4 text-zinc-400" />
           </div>
           <div>
-            <div className="text-2xl font-bold tracking-tight text-zinc-900">
+            <div className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
               Friday 23:59
             </div>
-            <div className="text-xs text-zinc-400 mt-1">
+            <div className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
               Round 1 automated allocation lock
             </div>
           </div>
         </div>
       </div>
 
-      {/* Submitted Choices Table */}
-      <div className="bg-white rounded-2xl border border-zinc-200/80 shadow-xs flex-1 flex flex-col overflow-hidden">
-        <div className="px-5 py-4 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50">
+      {/* Submitted Choices Table (Full dark/light mode) */}
+      <div className="bg-white dark:bg-[#18181b] rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-xs flex-1 flex flex-col overflow-hidden">
+        <div className="px-5 py-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-900/40">
           <div>
-            <h3 className="text-sm font-bold text-zinc-900">My Ranked Choices</h3>
-            <p className="text-xs text-zinc-400 mt-0.5">Automated clash-checked preference order</p>
+            <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">My Ranked Choices</h3>
+            <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">Automated clash-checked preference order</p>
           </div>
           <Link href="/picks">
-            <button className="text-xs font-semibold text-zinc-700 hover:text-black flex items-center gap-1.5 px-3 py-1.5 bg-white border border-zinc-200 rounded-lg hover:bg-zinc-50 shadow-xs transition-all">
+            <button className="text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:text-black dark:hover:text-white flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-700 shadow-xs transition-all">
               <span>Reorder Picks</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
@@ -136,7 +204,7 @@ export default function DashboardPage() {
         <div className="flex-1 overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-zinc-100 text-zinc-400 font-semibold text-[11px]">
+              <tr className="border-b border-zinc-100 dark:border-zinc-800 text-zinc-400 dark:text-zinc-500 font-semibold text-[11px]">
                 <th className="py-3 px-5 font-medium">Rank</th>
                 <th className="py-3 px-4 font-medium">Course Title</th>
                 <th className="py-3 px-4 font-medium">Department</th>
@@ -146,7 +214,7 @@ export default function DashboardPage() {
                 <th className="py-3 px-5 text-right font-medium">Validation Note</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-100/80">
+            <tbody className="divide-y divide-zinc-100/80 dark:divide-zinc-800">
               {loading ? (
                 <tr>
                   <td colSpan={7} className="py-10 text-center text-zinc-400">Loading your choices...</td>
@@ -154,7 +222,7 @@ export default function DashboardPage() {
               ) : choices.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-zinc-400">
-                    No choices submitted yet. <Link href="/browse" className="text-zinc-800 underline font-semibold">Browse electives catalog</Link>
+                    No choices submitted yet. <Link href="/browse" className="text-zinc-800 dark:text-zinc-200 underline font-semibold">Browse electives catalog</Link>
                   </td>
                 </tr>
               ) : (
@@ -179,22 +247,22 @@ export default function DashboardPage() {
                   }
 
                   return (
-                    <tr key={c.id} className="hover:bg-zinc-50/70 transition-colors">
+                    <tr key={c.id} className="hover:bg-zinc-50/70 dark:hover:bg-zinc-900/50 transition-colors">
                       <td className="py-3 px-5">
-                        <span className="w-6 h-6 rounded-md bg-zinc-100 text-zinc-700 font-bold text-xs flex items-center justify-center border border-zinc-200">
+                        <span className="w-6 h-6 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 font-bold text-xs flex items-center justify-center border border-zinc-200 dark:border-zinc-700">
                           #{c.preference}
                         </span>
                       </td>
-                      <td className="py-3 px-4 font-semibold text-zinc-900">
+                      <td className="py-3 px-4 font-semibold text-zinc-900 dark:text-zinc-100">
                         {c.elective.title}
                       </td>
-                      <td className="py-3 px-4 text-zinc-600">
+                      <td className="py-3 px-4 text-zinc-600 dark:text-zinc-400">
                         {c.elective.dept}
                       </td>
-                      <td className="py-3 px-4 text-zinc-600">
+                      <td className="py-3 px-4 text-zinc-600 dark:text-zinc-400">
                         {c.elective.day} {c.elective.start}–{c.elective.end}
                       </td>
-                      <td className="py-3 px-4 font-mono text-zinc-700">
+                      <td className="py-3 px-4 font-mono text-zinc-700 dark:text-zinc-300">
                         {c.elective.credits} cr
                       </td>
                       <td className="py-3 px-4">
@@ -202,9 +270,9 @@ export default function DashboardPage() {
                       </td>
                       <td className="py-3 px-5 text-right text-zinc-500 font-medium text-[11px]">
                         {c.reason ? (
-                          <span className="text-red-600 font-semibold">{c.reason}</span>
+                          <span className="text-red-600 dark:text-red-400 font-semibold">{c.reason}</span>
                         ) : (
-                          <span className="text-emerald-600">Prerequisites satisfied</span>
+                          <span className="text-emerald-600 dark:text-emerald-400">Prerequisites satisfied</span>
                         )}
                       </td>
                     </tr>

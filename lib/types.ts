@@ -1,4 +1,17 @@
-export type Role = "student" | "admin";
+export type Role = "student" | "admin" | "faculty";
+
+export interface WaiverRequest {
+  id: string;
+  studentId: string;
+  studentName: string;
+  studentEmail: string;
+  electiveId: string;
+  electiveTitle: string;
+  missingPrereq: string;
+  reason: string;
+  status: "pending" | "approved" | "rejected";
+  createdAt: string;
+}
 
 export type Elective = {
   id: string; title: string; dept: string; credits: number;

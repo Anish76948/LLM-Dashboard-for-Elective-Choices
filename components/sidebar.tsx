@@ -46,7 +46,9 @@ export function Sidebar() {
     toast.success(`Switched active persona to ${name}`);
     if (userRole === "admin") {
       router.push("/admin");
-    } else if (pathname === "/admin") {
+    } else if (userRole === "faculty") {
+      router.push("/faculty");
+    } else if (pathname === "/admin" || pathname === "/faculty") {
       router.push("/dashboard");
     } else {
       router.refresh();
@@ -62,19 +64,24 @@ export function Sidebar() {
 
   const isStudent1 = currentUser === "student1@demo.edu";
   const isStudent2 = currentUser === "student2@demo.edu";
+  const isFaculty = role === "faculty" || currentUser === "faculty@demo.edu";
   const isAdmin = role === "admin" || currentUser === "admin@demo.edu";
 
   const studentName = isStudent1
     ? "Alex Rivera"
     : isStudent2
     ? "Maya Chen"
-    : "Dr. Robert Vance";
+    : isFaculty
+    ? "Prof. Marcus Vance"
+    : "Academic Admin";
 
   const studentTitle = isStudent1
     ? "3rd Year • Has ML Prereq"
     : isStudent2
-    ? "3rd Year • No ML Prereq"
-    : "Academic Dean • Admin";
+    ? "3rd Year • Missing ML"
+    : isFaculty
+    ? "Faculty • CS & AI"
+    : "Academic Administration";
 
   return (
     <aside className="w-60 bg-transparent flex flex-col shrink-0 h-screen sticky top-0 py-4 pl-4 select-none">
@@ -89,7 +96,7 @@ export function Sidebar() {
       </div>
 
       {/* Navigation Sections */}
-      <div className="flex-1 overflow-y-auto px-2 space-y-6 text-[13px]">
+      <div className="flex-1 overflow-y-auto px-2 space-y-5 text-[13px]">
         {/* Section 1: Overview */}
         <div className="space-y-0.5">
           <Link
@@ -97,8 +104,8 @@ export function Sidebar() {
             className={cn(
               "flex items-center gap-3 px-3 py-2 rounded-xl font-medium transition-all duration-150",
               pathname === "/dashboard"
-                ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 shadow-xs border border-zinc-200/70 dark:border-zinc-800"
-                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-white/60 dark:hover:bg-zinc-900/40"
+                ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-xs border border-zinc-200/70 dark:border-zinc-700"
+                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-white/60 dark:hover:bg-zinc-800/40"
             )}
           >
             <Activity className="w-4 h-4 text-zinc-500" />
@@ -110,8 +117,8 @@ export function Sidebar() {
             className={cn(
               "flex items-center gap-3 px-3 py-2 rounded-xl font-medium transition-all duration-150",
               pathname === "/browse"
-                ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 shadow-xs border border-zinc-200/70 dark:border-zinc-800"
-                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-white/60 dark:hover:bg-zinc-900/40"
+                ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-xs border border-zinc-200/70 dark:border-zinc-700"
+                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-white/60 dark:hover:bg-zinc-800/40"
             )}
           >
             <BookOpen className="w-4 h-4 text-zinc-500" />
@@ -123,8 +130,8 @@ export function Sidebar() {
             className={cn(
               "flex items-center justify-between px-3 py-2 rounded-xl font-medium transition-all duration-150",
               pathname === "/picks"
-                ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 shadow-xs border border-zinc-200/70 dark:border-zinc-800"
-                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-white/60 dark:hover:bg-zinc-900/40"
+                ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-xs border border-zinc-200/70 dark:border-zinc-700"
+                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-white/60 dark:hover:bg-zinc-800/40"
             )}
           >
             <div className="flex items-center gap-3">
@@ -147,8 +154,8 @@ export function Sidebar() {
             className={cn(
               "flex items-center justify-between px-3 py-2 rounded-xl font-medium transition-all duration-150",
               pathname === "/advisor"
-                ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 shadow-xs border border-zinc-200/70 dark:border-zinc-800"
-                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-white/60 dark:hover:bg-zinc-900/40"
+                ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-xs border border-zinc-200/70 dark:border-zinc-700"
+                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-white/60 dark:hover:bg-zinc-800/40"
             )}
           >
             <div className="flex items-center gap-3">
@@ -161,7 +168,31 @@ export function Sidebar() {
           </Link>
         </div>
 
-        {/* Section 3: ADMINISTRATION */}
+        {/* Section 3: FACULTY */}
+        <div className="space-y-1">
+          <div className="px-3 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+            FACULTY
+          </div>
+          <Link
+            href="/faculty"
+            className={cn(
+              "flex items-center justify-between px-3 py-2 rounded-xl font-medium transition-all duration-150",
+              pathname === "/faculty"
+                ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-xs border border-zinc-200/70 dark:border-zinc-700"
+                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-white/60 dark:hover:bg-zinc-800/40"
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <GraduationCap className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span>Instructor Portal</span>
+            </div>
+            <span className="text-[9px] bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold px-1.5 py-0.5 rounded-md">
+              Waivers
+            </span>
+          </Link>
+        </div>
+
+        {/* Section 4: ADMINISTRATION */}
         <div className="space-y-1">
           <div className="px-3 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
             GOVERNANCE
@@ -171,8 +202,8 @@ export function Sidebar() {
             className={cn(
               "flex items-center gap-3 px-3 py-2 rounded-xl font-medium transition-all duration-150",
               pathname === "/admin"
-                ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 shadow-xs border border-zinc-200/70 dark:border-zinc-800"
-                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-white/60 dark:hover:bg-zinc-900/40"
+                ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-xs border border-zinc-200/70 dark:border-zinc-700"
+                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-white/60 dark:hover:bg-zinc-800/40"
             )}
           >
             <BarChart3 className="w-4 h-4 text-zinc-500" />
@@ -185,11 +216,11 @@ export function Sidebar() {
       <div className="relative px-2 pt-2 border-t border-zinc-200/60 dark:border-zinc-800">
         <button
           onClick={() => setDemoMenuOpen(!demoMenuOpen)}
-          className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-white/80 dark:hover:bg-zinc-900/80 transition-all text-left group border border-transparent hover:border-zinc-200/70 dark:hover:border-zinc-800"
+          className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-white/80 dark:hover:bg-zinc-800/80 transition-all text-left group border border-transparent hover:border-zinc-200/70 dark:hover:border-zinc-700"
         >
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-8 h-8 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-medium text-xs flex items-center justify-center shrink-0">
-              {isAdmin ? "AD" : isStudent1 ? "AR" : "MC"}
+              {isAdmin ? "AD" : isFaculty ? "MV" : isStudent1 ? "AR" : "MC"}
             </div>
             <div className="truncate">
               <div className="text-xs font-semibold text-zinc-900 dark:text-zinc-100 truncate leading-tight">
@@ -200,7 +231,7 @@ export function Sidebar() {
               </div>
             </div>
           </div>
-          <ChevronDown className="w-3.5 h-3.5 text-zinc-400 shrink-0 group-hover:text-zinc-700 transition-transform" />
+          <ChevronDown className="w-3.5 h-3.5 text-zinc-400 shrink-0 group-hover:text-zinc-700 dark:group-hover:text-zinc-200 transition-transform" />
         </button>
 
         {/* Demo Switcher Dropdown */}
@@ -210,7 +241,7 @@ export function Sidebar() {
               Switch Demo Persona
             </div>
             <button
-              onClick={() => switchDemoUser("student1@demo.edu", "student", "Student 1 (Alex Rivera)")}
+              onClick={() => switchDemoUser("student1@demo.edu", "student", "Alex Rivera (Student 1)")}
               className={cn(
                 "w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center justify-between transition-colors",
                 isStudent1 ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 font-semibold" : "hover:bg-zinc-50 dark:hover:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400"
@@ -220,17 +251,27 @@ export function Sidebar() {
               {isStudent1 && <span className="text-[10px] text-emerald-600 font-bold">Active</span>}
             </button>
             <button
-              onClick={() => switchDemoUser("student2@demo.edu", "student", "Student 2 (Maya Chen)")}
+              onClick={() => switchDemoUser("student2@demo.edu", "student", "Maya Chen (Student 2)")}
               className={cn(
                 "w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center justify-between transition-colors",
                 isStudent2 ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 font-semibold" : "hover:bg-zinc-50 dark:hover:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400"
               )}
             >
-              <span>Maya (Missing ML)</span>
+              <span>Maya (Missing ML - Waiver)</span>
               {isStudent2 && <span className="text-[10px] text-amber-600 font-bold">Active</span>}
             </button>
             <button
-              onClick={() => switchDemoUser("admin@demo.edu", "admin", "Academic Administration (Admin)")}
+              onClick={() => switchDemoUser("faculty@demo.edu", "faculty", "Prof. Marcus Vance (Faculty)")}
+              className={cn(
+                "w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center justify-between transition-colors",
+                isFaculty ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 font-semibold" : "hover:bg-zinc-50 dark:hover:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400"
+              )}
+            >
+              <span>Prof. Vance (Faculty)</span>
+              {isFaculty && <span className="text-[10px] text-emerald-600 font-bold">Active</span>}
+            </button>
+            <button
+              onClick={() => switchDemoUser("admin@demo.edu", "admin", "Academic Administration")}
               className={cn(
                 "w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center justify-between transition-colors",
                 isAdmin ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 font-semibold" : "hover:bg-zinc-50 dark:hover:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400"
@@ -239,10 +280,10 @@ export function Sidebar() {
               <span>Academic Administration</span>
               {isAdmin && <span className="text-[10px] text-purple-600 font-bold">Active</span>}
             </button>
-            <div className="pt-1 border-t border-zinc-100">
+            <div className="pt-1 border-t border-zinc-100 dark:border-zinc-800">
               <button
                 onClick={handleLogout}
-                className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50 flex items-center gap-2"
+                className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center gap-2"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span>Log Out</span>

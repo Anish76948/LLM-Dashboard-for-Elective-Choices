@@ -30,11 +30,15 @@ export default function LoginPage() {
 
       if (error) {
         if (email.includes("@demo.edu") && password === "demo123") {
-          const role = email.includes("admin") ? "admin" : "student";
+          const role = email.includes("admin")
+            ? "admin"
+            : email.includes("faculty")
+            ? "faculty"
+            : "student";
           document.cookie = `user_role=${role}; path=/; max-age=86400`;
           document.cookie = `electiveos_user=${email}; path=/; max-age=86400`;
           toast.success(`Logged in as ${email}`);
-          router.push(role === "admin" ? "/admin" : "/dashboard");
+          router.push(role === "admin" ? "/admin" : role === "faculty" ? "/faculty" : "/dashboard");
           return;
         }
         toast.error(error.message);
@@ -47,12 +51,18 @@ export default function LoginPage() {
         .eq("id", data.user?.id)
         .single();
 
-      const role = profile?.role || (email.includes("admin") ? "admin" : "student");
+      const role =
+        profile?.role ||
+        (email.includes("admin")
+          ? "admin"
+          : email.includes("faculty")
+          ? "faculty"
+          : "student");
       document.cookie = `user_role=${role}; path=/; max-age=86400`;
       document.cookie = `electiveos_user=${email}; path=/; max-age=86400`;
 
       toast.success("Welcome back to Elective!");
-      router.push(role === "admin" ? "/admin" : "/dashboard");
+      router.push(role === "admin" ? "/admin" : role === "faculty" ? "/faculty" : "/dashboard");
     } catch (err: any) {
       toast.error(err.message || "Failed to log in");
     } finally {
@@ -151,7 +161,7 @@ export default function LoginPage() {
               <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider text-center">
                 Select Demo Persona
               </div>
-              <div className="grid grid-cols-3 gap-1.5">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                 <button
                   type="button"
                   onClick={() => applyDemoPersona("student1@demo.edu", "Student 1 (Full Prereqs)")}
@@ -165,6 +175,13 @@ export default function LoginPage() {
                   className="py-1.5 px-2 bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-lg text-[11px] font-semibold text-zinc-700 dark:text-zinc-300 text-center transition-colors"
                 >
                   Student 2
+                </button>
+                <button
+                  type="button"
+                  onClick={() => applyDemoPersona("faculty@demo.edu", "Prof. Vance (Faculty)")}
+                  className="py-1.5 px-2 bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-lg text-[11px] font-semibold text-zinc-700 dark:text-zinc-300 text-center transition-colors"
+                >
+                  Faculty
                 </button>
                 <button
                   type="button"
