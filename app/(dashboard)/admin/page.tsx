@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { Topbar } from "@/components/topbar";
-import { getAnalytics } from "@/lib/api";
-import { Analytics } from "@/lib/types";
+import { getAnalytics, getElectives } from "@/lib/api";
+import { Analytics, Elective } from "@/lib/types";
+import { toast } from "sonner";
 import {
   BarChart,
   Bar,
@@ -21,24 +22,54 @@ import {
   Calendar,
   CheckCircle2,
   FileText,
-  MoreHorizontal,
+  Plus,
+  Play,
+  Download,
   Sparkles,
   TrendingUp,
-  AlertCircle,
-  BarChart3
+  BarChart3,
+  X,
+  Check,
+  Clock,
+  Layers
 } from "lucide-react";
 
-const COLORS = ["#18181b", "#71717a", "#a1a1aa", "#d4d4d8", "#e4e4e7"];
+const COLORS = ["#18181b", "#71717a", "#a1a1aa", "#d4d4d8", "#3f3f46"];
 
 export default function AdminPage() {
   const [data, setData] = useState<Analytics | null>(null);
+  const [electives, setElectives] = useState<Elective[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Modals state
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [allocResultModal, setAllocResultModal] = useState<any | null>(null);
+  const [runningAlloc, setRunningAlloc] = useState(false);
+
+  // New elective form state
+  const [newTitle, setNewTitle] = useState("");
+  const [newDept, setNewDept] = useState("Computer Science");
+  const [newCapacity, setNewCapacity] = useState("50");
+  const [newCredits, setNewCredits] = useState("3");
+  const [newDay, setNewDay] = useState("Tuesday");
+  const [newStart, setNewStart] = useState("10:00");
+  const [newEnd, setNewEnd] = useState("11:30");
+  const [newPrereqs, setNewPrereqs] = useState("");
+
+  const refreshData = async () => {
+    try {
+      const [analyticsRes, electivesRes] = await Promise.all([getAnalytics(), getElectives()]);
+      setData(analyticsRes);
+      setElectives(electivesRes);
+    } catch (e) {
+      console.warn("Failed to reload admin data", e);
+    }
+  };
 
   useEffect(() => {
     async function load() {
       try {
-        const res = await getAnalytics();
-        setData(res);
+        await refreshData();
       } finally {
         setLoading(false);
       }
@@ -46,12 +77,105 @@ export default function AdminPage() {
     load();
   }, []);
 
+  // Admin Action: Create Elective Course
+  const handleCreateElective = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTitle.trim()) {
+      toast.error("Please enter a course title");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/electives", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: newTitle.trim(),
+          dept: newDept,
+          capacity: Number(newCapacity) || 50,
+          credits: Number(newCredits) || 3,
+          day: newDay,
+          start: newStart,
+          end: newEnd,
+          prereqs: newPrereqs.split(",").map((s) => s.trim()).filter(Boolean),
+          difficulty: "medium",
+          description: `Core institutional elective in ${newDept}.`,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to create elective");
+
+      toast.success(`Created Elective: ${newTitle}`);
+      setCreateModalOpen(false);
+      setNewTitle("");
+      setNewPrereqs("");
+      await refreshData();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to create course");
+    }
+  };
+
+  // Admin Action: Expand Seats in Real-time
+  const handleExpandSeats = async (id: string, title: string, delta: number) => {
+    try {
+      const res = await fetch("/api/electives", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, capacityDelta: delta }),
+      });
+      if (!res.ok) throw new Error("Capacity expansion failed");
+
+      toast.success(`Expanded ${title} by +${delta} seats!`);
+      await refreshData();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to expand seats");
+    }
+  };
+
+  // Admin Action: Run Allocation Algorithm
+  const handleRunAllocation = async () => {
+    setRunningAlloc(true);
+    try {
+      const res = await fetch("/api/admin/allocate", { method: "POST" });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Algorithm failed");
+
+      setAllocResultModal(result.stats);
+      toast.success("Round 1 Priority Matching Engine finished!");
+      await refreshData();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to run algorithm");
+    } finally {
+      setRunningAlloc(false);
+    }
+  };
+
+  // Admin Action: Export CSV
+  const handleExportCSV = () => {
+    if (!data) return;
+    let csv = "Course Title,Choices Submitted,Classroom Capacity,Fill Rate,Status\n";
+    data.perElective.forEach((e) => {
+      const fill = Math.round((e.choices / e.capacity) * 100);
+      csv += `"${e.title}",${e.choices},${e.capacity},${fill}%,${fill >= 90 ? "Saturated" : "Healthy"}\n`;
+    });
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `elective_master_allocations_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("Exported master allocations CSV");
+  };
+
   if (loading || !data) {
     return (
       <div className="flex flex-col flex-1">
         <Topbar />
         <div className="py-24 text-center text-xs text-zinc-400">
-          Aggregating university allocation ledger...
+          Aggregating institutional allocation ledger...
         </div>
       </div>
     );
@@ -65,91 +189,116 @@ export default function AdminPage() {
     <div className="flex flex-col flex-1">
       <Topbar />
 
-      {/* Header Banner */}
+      {/* Header Banner with Admin Actions */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
         <div>
           <div className="text-[11px] font-bold tracking-wider uppercase text-zinc-400 mb-1">
             GOVERNANCE
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">Allocation Ledger & Analytics</h1>
-          <p className="text-xs text-zinc-500 mt-1 max-w-xl">
-            Live institutional demand figures, department preference share, and automated AI curriculum insights.
+          <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+            Academic Administration Portal
+          </h1>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-xl">
+            Institutional elective management, real-time capacity expansion, automated allocation engine, and ledger reporting.
           </p>
         </div>
 
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-zinc-100 text-zinc-800 rounded-xl text-xs font-semibold border border-zinc-200">
-          <ShieldCheck className="w-3.5 h-3.5 text-zinc-900" />
-          <span>Dean Administrator Access</span>
+        {/* Top Action Buttons (Admin Superpowers) */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={handleExportCSV}
+            className="h-9 px-3 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700/80 text-xs font-semibold rounded-xl shadow-xs flex items-center gap-1.5 transition-all"
+          >
+            <Download className="w-3.5 h-3.5 text-zinc-500" />
+            <span className="hidden sm:inline">Export CSV</span>
+          </button>
+
+          <button
+            onClick={handleRunAllocation}
+            disabled={runningAlloc}
+            className="h-9 px-3.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold rounded-xl shadow-xs flex items-center gap-1.5 transition-all disabled:opacity-50"
+          >
+            <Play className={`w-3.5 h-3.5 ${runningAlloc ? "animate-spin" : ""}`} />
+            <span>{runningAlloc ? "Running Engine..." : "Run Allocation Round"}</span>
+          </button>
+
+          <button
+            onClick={() => setCreateModalOpen(true)}
+            className="h-9 px-4 bg-zinc-900 hover:bg-black dark:bg-zinc-100 dark:hover:bg-white dark:text-zinc-900 text-white text-xs font-semibold rounded-xl shadow-xs flex items-center gap-1.5 transition-all"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Create Elective</span>
+          </button>
         </div>
       </div>
 
-      {/* 3 Summary Stat Cards matching screenshot */}
+      {/* 3 Summary Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-2xl border border-zinc-200/80 p-5 shadow-xs flex flex-col justify-between hover:border-zinc-300 transition-all">
+        <div className="bg-white dark:bg-[#121215] rounded-2xl border border-zinc-200/80 dark:border-zinc-800 p-5 shadow-xs flex flex-col justify-between hover:border-zinc-300 dark:hover:border-zinc-700 transition-all">
           <div className="flex items-center justify-between text-zinc-400 mb-3">
             <div className="flex items-center gap-2 text-[11px] font-bold tracking-wider uppercase text-zinc-500">
               <Calendar className="w-4 h-4 text-zinc-400" />
               <span>TOTAL DEMAND</span>
             </div>
-            <MoreHorizontal className="w-4 h-4 text-zinc-400" />
+            <span className="text-xs text-zinc-400 font-mono">Live</span>
           </div>
           <div>
-            <div className="text-2xl font-bold tracking-tight text-zinc-900">
+            <div className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
               {totalDemand} Picks
             </div>
             <div className="text-xs text-zinc-400 mt-1">
-              Active student preferences across all courses
+              Active student preference submissions
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-zinc-200/80 p-5 shadow-xs flex flex-col justify-between hover:border-zinc-300 transition-all">
+        <div className="bg-white dark:bg-[#121215] rounded-2xl border border-zinc-200/80 dark:border-zinc-800 p-5 shadow-xs flex flex-col justify-between hover:border-zinc-300 dark:hover:border-zinc-700 transition-all">
           <div className="flex items-center justify-between text-zinc-400 mb-3">
             <div className="flex items-center gap-2 text-[11px] font-bold tracking-wider uppercase text-zinc-500">
               <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span>CAPACITY FILL RATIO</span>
+              <span>CAPACITY SATURATION</span>
             </div>
-            <MoreHorizontal className="w-4 h-4 text-zinc-400" />
+            <span className="text-xs text-zinc-400 font-mono">Live</span>
           </div>
           <div>
-            <div className="text-2xl font-bold tracking-tight text-zinc-900">
-              {demandVelocity}% Velocity
+            <div className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+              {demandVelocity}% Saturated
             </div>
             <div className="text-xs text-zinc-400 mt-1">
-              {totalCapacity} total classroom seats provisioned
+              {totalCapacity} total classroom seats available
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-zinc-200/80 p-5 shadow-xs flex flex-col justify-between hover:border-zinc-300 transition-all">
+        <div className="bg-white dark:bg-[#121215] rounded-2xl border border-zinc-200/80 dark:border-zinc-800 p-5 shadow-xs flex flex-col justify-between hover:border-zinc-300 dark:hover:border-zinc-700 transition-all">
           <div className="flex items-center justify-between text-zinc-400 mb-3">
             <div className="flex items-center gap-2 text-[11px] font-bold tracking-wider uppercase text-zinc-500">
               <FileText className="w-4 h-4 text-amber-500" />
-              <span>WAITLIST PRESSURE</span>
+              <span>WAITLIST CANDIDATES</span>
             </div>
-            <MoreHorizontal className="w-4 h-4 text-zinc-400" />
+            <span className="text-xs text-zinc-400 font-mono">Queue</span>
           </div>
           <div>
             <div className="text-2xl font-bold tracking-tight text-amber-600">
               {data.waitlistTotal} Students
             </div>
             <div className="text-xs text-zinc-400 mt-1">
-              Candidates queued on saturated sections
+              Queued across oversubscribed sections
             </div>
           </div>
         </div>
       </div>
 
-      {/* Charts Section */}
+      {/* Analytics Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
         {/* Choices per Elective */}
-        <div className="bg-white rounded-2xl border border-zinc-200/80 p-5 shadow-xs">
+        <div className="bg-white dark:bg-[#121215] rounded-2xl border border-zinc-200/80 dark:border-zinc-800 p-5 shadow-xs">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h4 className="text-xs font-bold text-zinc-900 uppercase tracking-wider">
-                Choices vs Capacity
+              <h4 className="text-xs font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">
+                Choices vs Capacity by Course
               </h4>
-              <p className="text-[11px] text-zinc-400">Demand volume per elective offering</p>
+              <p className="text-[11px] text-zinc-400">Demand saturation per course offering</p>
             </div>
             <BarChart3 className="w-4 h-4 text-zinc-400" />
           </div>
@@ -160,20 +309,20 @@ export default function AdminPage() {
                 <YAxis tick={{ fontSize: 10 }} />
                 <RechartsTooltip contentStyle={{ fontSize: "11px", borderRadius: "8px" }} />
                 <Bar dataKey="choices" name="Student Picks" fill="#18181b" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="capacity" name="Capacity" fill="#e4e4e7" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="capacity" name="Capacity" fill="#d4d4d8" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Dept Split Donut */}
-        <div className="bg-white rounded-2xl border border-zinc-200/80 p-5 shadow-xs">
+        <div className="bg-white dark:bg-[#121215] rounded-2xl border border-zinc-200/80 dark:border-zinc-800 p-5 shadow-xs">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h4 className="text-xs font-bold text-zinc-900 uppercase tracking-wider">
+              <h4 className="text-xs font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">
                 Department Preference Share
               </h4>
-              <p className="text-[11px] text-zinc-400">Distribution across disciplines</p>
+              <p className="text-[11px] text-zinc-400">Volume across academic divisions</p>
             </div>
             <TrendingUp className="w-4 h-4 text-zinc-400" />
           </div>
@@ -203,60 +352,67 @@ export default function AdminPage() {
       </div>
 
       {/* AI Curriculum Insight Card */}
-      <div className="bg-zinc-50 border border-zinc-200/90 rounded-2xl p-5 shadow-xs mb-6 space-y-2">
-        <div className="flex items-center gap-2 text-[11px] font-bold text-zinc-900 uppercase tracking-wider">
+      <div className="bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200/90 dark:border-zinc-800 rounded-2xl p-5 shadow-xs mb-6 space-y-2">
+        <div className="flex items-center gap-2 text-[11px] font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">
           <Sparkles className="w-4 h-4 text-purple-600" />
-          <span>Automated Dean's Intelligence Report</span>
+          <span>Automated Administration Intelligence</span>
         </div>
-        <div className="text-xs text-zinc-600 space-y-1.5 leading-relaxed">
+        <div className="text-xs text-zinc-600 dark:text-zinc-300 space-y-1.5 leading-relaxed">
           <p>
-            • <strong>Section Expansion Recommended:</strong> <em>"Deep Learning & Neural Networks"</em> is at 94% capacity with an active waitlist of 8 students. Opening a 20-seat secondary section on Friday afternoon will resolve 100% of overflow.
+            • <strong>High Demand Overflow:</strong> <em>"Deep Learning & Neural Networks"</em> has reached 94% capacity. Use the <strong>"+10 Seats"</strong> button in the ledger below to instantly expand capacity and clear waitlisted students.
           </p>
           <p>
-            • <strong>Prerequisite Friction:</strong> 18 third-year students were blocked from <em>"Applied Computer Vision"</em> due to lacking <em>"Machine Learning Fundamentals"</em>. Consider an accelerated prerequisite bridge module.
+            • <strong>Department Balance:</strong> Computer Science and Management represent 72% of all submitted choices. Ensure Friday lab venues have adequate power and terminal setups.
           </p>
         </div>
       </div>
 
-      {/* Course Ledger Table matching screenshot */}
-      <div className="bg-white rounded-2xl border border-zinc-200/80 shadow-xs overflow-hidden">
-        <div className="px-5 py-3 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/50 text-xs">
-          <span className="font-semibold text-zinc-800">Approved Course Offerings Ledger</span>
-          <span className="text-zinc-400">1 to {data.perElective.length} of {data.perElective.length}</span>
+      {/* Course Ledger with Admin Controls (Quick Capacity Expand) */}
+      <div className="bg-white dark:bg-[#121215] rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-xs overflow-hidden">
+        <div className="px-5 py-3 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-900/40 text-xs">
+          <span className="font-semibold text-zinc-800 dark:text-zinc-200">
+            Course Offerings & Admin Expansion Ledger
+          </span>
+          <span className="text-zinc-400">1 to {data.perElective.length} courses</span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-zinc-100 text-zinc-400 font-semibold text-[11px]">
+              <tr className="border-b border-zinc-100 dark:border-zinc-800 text-zinc-400 font-semibold text-[11px]">
                 <th className="py-3 px-5 font-medium">Course Title</th>
-                <th className="py-3 px-4 font-medium text-center">Allocated Picks</th>
-                <th className="py-3 px-4 font-medium text-center">Classroom Capacity</th>
+                <th className="py-3 px-4 font-medium text-center">Picks</th>
+                <th className="py-3 px-4 font-medium text-center">Capacity</th>
                 <th className="py-3 px-4 font-medium text-center">Saturation</th>
-                <th className="py-3 px-5 text-right font-medium">Allocation Health</th>
+                <th className="py-3 px-4 font-medium">Status</th>
+                <th className="py-3 px-5 text-right font-medium">Admin Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-100/80">
+            <tbody className="divide-y divide-zinc-100/80 dark:divide-zinc-800">
               {data.perElective.map((item, idx) => {
                 const fill = Math.round((item.choices / item.capacity) * 100);
                 const isOver = fill >= 90;
+                // Find matching elective id
+                const matchedElec = electives.find((e) => e.title.toLowerCase() === item.title.toLowerCase());
+                const targetId = matchedElec?.id || "";
+
                 return (
-                  <tr key={idx} className="hover:bg-zinc-50/70 transition-colors">
-                    <td className="py-3 px-5 font-semibold text-zinc-900">
+                  <tr key={idx} className="hover:bg-zinc-50/70 dark:hover:bg-zinc-900/50 transition-colors">
+                    <td className="py-3 px-5 font-semibold text-zinc-900 dark:text-zinc-100">
                       {item.title}
                     </td>
                     <td className="py-3 px-4 text-center font-mono">
                       {item.choices}
                     </td>
-                    <td className="py-3 px-4 text-center font-mono text-zinc-600">
+                    <td className="py-3 px-4 text-center font-mono text-zinc-600 dark:text-zinc-400">
                       {item.capacity}
                     </td>
                     <td className="py-3 px-4 text-center font-mono font-medium">
-                      <span className={isOver ? "text-amber-600 font-bold" : "text-zinc-700"}>
+                      <span className={isOver ? "text-amber-600 font-bold" : "text-zinc-700 dark:text-zinc-300"}>
                         {fill}%
                       </span>
                     </td>
-                    <td className="py-3 px-5 text-right">
+                    <td className="py-3 px-4">
                       {isOver ? (
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium badge-waitlist">
                           90%+ Saturated
@@ -267,6 +423,17 @@ export default function AdminPage() {
                         </span>
                       )}
                     </td>
+                    <td className="py-3 px-5 text-right">
+                      {targetId && (
+                        <button
+                          onClick={() => handleExpandSeats(targetId, item.title, 10)}
+                          className="px-2.5 py-1 text-[11px] font-semibold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 rounded-lg transition-colors inline-flex items-center gap-1"
+                        >
+                          <Plus className="w-3 h-3" />
+                          <span>+10 Seats</span>
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
@@ -274,6 +441,197 @@ export default function AdminPage() {
           </table>
         </div>
       </div>
+
+      {/* MODAL 1: CREATE NEW ELECTIVE */}
+      {createModalOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in-up">
+          <div className="bg-white dark:bg-[#121215] rounded-[24px] border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-lg p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
+              <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                Provision New Elective Offering
+              </h3>
+              <button
+                onClick={() => setCreateModalOpen(false)}
+                className="text-zinc-400 hover:text-zinc-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateElective} className="space-y-3.5 text-xs">
+              <div className="space-y-1">
+                <label className="font-semibold text-zinc-700 dark:text-zinc-300">Course Title</label>
+                <input
+                  type="text"
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  placeholder="e.g. LLM Systems Engineering & Fine-Tuning"
+                  className="w-full h-8 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg focus:outline-none focus:ring-1 focus:ring-zinc-400"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="font-semibold text-zinc-700 dark:text-zinc-300">Department</label>
+                  <select
+                    value={newDept}
+                    onChange={(e) => setNewDept(e.target.value)}
+                    className="w-full h-8 px-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg"
+                  >
+                    <option value="Computer Science">Computer Science</option>
+                    <option value="Data Science">Data Science</option>
+                    <option value="Management">Management</option>
+                    <option value="Electronics & Comm">Electronics & Comm</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="font-semibold text-zinc-700 dark:text-zinc-300">Classroom Capacity</label>
+                  <input
+                    type="number"
+                    value={newCapacity}
+                    onChange={(e) => setNewCapacity(e.target.value)}
+                    className="w-full h-8 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg"
+                    min="5"
+                    max="300"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <label className="font-semibold text-zinc-700 dark:text-zinc-300">Credits</label>
+                  <input
+                    type="number"
+                    value={newCredits}
+                    onChange={(e) => setNewCredits(e.target.value)}
+                    className="w-full h-8 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg"
+                    min="1"
+                    max="6"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="font-semibold text-zinc-700 dark:text-zinc-300">Weekly Day</label>
+                  <select
+                    value={newDay}
+                    onChange={(e) => setNewDay(e.target.value)}
+                    className="w-full h-8 px-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg"
+                  >
+                    <option value="Monday">Monday</option>
+                    <option value="Tuesday">Tuesday</option>
+                    <option value="Wednesday">Wednesday</option>
+                    <option value="Thursday">Thursday</option>
+                    <option value="Friday">Friday</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="font-semibold text-zinc-700 dark:text-zinc-300">Time Slot</label>
+                  <input
+                    type="text"
+                    value={`${newStart}-${newEnd}`}
+                    onChange={(e) => {
+                      const [s, ed] = e.target.value.split("-");
+                      if (s) setNewStart(s);
+                      if (ed) setNewEnd(ed);
+                    }}
+                    placeholder="10:00-11:30"
+                    className="w-full h-8 px-2 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-semibold text-zinc-700 dark:text-zinc-300">Prerequisites (comma-separated)</label>
+                <input
+                  type="text"
+                  value={newPrereqs}
+                  onChange={(e) => setNewPrereqs(e.target.value)}
+                  placeholder="e.g. Data Structures, Machine Learning Fundamentals"
+                  className="w-full h-8 px-3 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => setCreateModalOpen(false)}
+                  className="px-3 h-8 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-lg font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 h-8 bg-zinc-900 hover:bg-black dark:bg-zinc-100 dark:hover:bg-white dark:text-zinc-900 text-white rounded-lg font-semibold shadow-xs"
+                >
+                  Save & Publish
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: ALLOCATION ALGORITHM RESULTS */}
+      {allocResultModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in-up">
+          <div className="bg-white dark:bg-[#121215] rounded-[24px] border border-zinc-200 dark:border-zinc-800 shadow-xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                  Priority Matching Round Complete
+                </h3>
+              </div>
+              <button
+                onClick={() => setAllocResultModal(null)}
+                className="text-zinc-400 hover:text-zinc-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="p-3 bg-zinc-50 dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800">
+                <div className="text-zinc-400 font-medium">Total Preferences Evaluated</div>
+                <div className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mt-1">
+                  {allocResultModal.totalProcessed}
+                </div>
+              </div>
+              <div className="p-3 bg-zinc-50 dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800">
+                <div className="text-zinc-400 font-medium">Successfully Allocated</div>
+                <div className="text-xl font-bold text-emerald-600 mt-1">
+                  {allocResultModal.confirmedCount}
+                </div>
+              </div>
+              <div className="p-3 bg-zinc-50 dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800">
+                <div className="text-zinc-400 font-medium">Queued to Waitlist</div>
+                <div className="text-xl font-bold text-amber-600 mt-1">
+                  {allocResultModal.waitlistCount}
+                </div>
+              </div>
+              <div className="p-3 bg-zinc-50 dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800">
+                <div className="text-zinc-400 font-medium">Overall Satisfaction Rate</div>
+                <div className="text-xl font-bold text-purple-600 mt-1">
+                  {allocResultModal.satisfactionRate}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-3 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 rounded-xl text-xs text-purple-800 dark:text-purple-300 flex items-center justify-between">
+              <span>Algorithmic Execution Time:</span>
+              <span className="font-mono font-bold">{allocResultModal.executionTimeMs} ms</span>
+            </div>
+
+            <button
+              onClick={() => setAllocResultModal(null)}
+              className="w-full h-9 bg-zinc-900 hover:bg-black dark:bg-zinc-100 dark:hover:bg-white dark:text-zinc-900 text-white text-xs font-semibold rounded-xl shadow-xs transition-all"
+            >
+              Done & Return to Ledger
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
