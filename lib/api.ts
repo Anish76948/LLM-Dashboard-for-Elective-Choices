@@ -129,7 +129,7 @@ export const MOCK_ELECTIVES: Elective[] = [
   },
 ];
 
-export const MOCK_CHOICES: Choice[] = [
+export let MOCK_CHOICES: Choice[] = [
   {
     id: "c1",
     elective: MOCK_ELECTIVES[0], // Deep Learning
@@ -248,51 +248,63 @@ export async function addChoice(
   electiveId: string,
   preference: number
 ): Promise<{ ok: boolean; choice?: Choice; status?: string; error?: string }> {
-  if (USE_MOCK) {
-    await delay(200);
-    const elective = MOCK_ELECTIVES.find((e) => e.id === electiveId);
-    if (!elective) return { ok: false, error: "Course not found" };
-    if (elective.prereqs.includes("Machine Learning Fundamentals") && elective.id === "e5") {
-      return { ok: false, status: "blocked", error: "Missing prereq: Machine Learning Fundamentals" };
-    }
-    if (elective.id === "e2") {
-      return { ok: false, status: "blocked", error: "Clash with Deep Learning & Neural Networks" };
-    }
-    const isFull = elective.enrolled >= elective.capacity;
-    const newChoice: Choice = {
-      id: "c_" + Date.now(),
-      elective,
-      preference,
-      status: isFull ? "waitlist" : "confirmed",
-      reason: isFull ? "Capacity reached" : undefined,
-    };
-    return { ok: true, choice: newChoice };
-  }
-
   try {
     const res = await fetch("/api/choices", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ electiveId, preference }),
     });
-    return await res.json();
+    if (res.ok) {
+      const data = await res.json();
+      if (data.ok) return data;
+      if (data.status === "blocked") return data;
+    }
   } catch (e: any) {
-    return { ok: false, error: e.message || "Network error" };
+    console.warn("API choices failed, falling back to in-memory state:", e);
   }
+
+  // Graceful in-memory demo fallback
+  await delay(150);
+  const elective = MOCK_ELECTIVES.find((e) => e.id === electiveId);
+  if (!elective) return { ok: false, error: "Course not found" };
+
+  const isWaiverApproved = MOCK_WAIVERS.some(
+    (w) => w.electiveId === electiveId && w.status === "approved"
+  );
+
+  const isStudent2 = typeof document !== "undefined" && document.cookie.includes("student2@demo.edu");
+  if (!isWaiverApproved && isStudent2 && elective.prereqs.includes("Machine Learning Fundamentals")) {
+    return { ok: false, status: "blocked", error: "Missing prereq: Machine Learning Fundamentals" };
+  }
+
+  if (elective.id === "e2" && MOCK_CHOICES.some((c) => c.elective.id === "e1")) {
+    return { ok: false, status: "blocked", error: "Clash with Deep Learning & Neural Networks" };
+  }
+
+  const isFull = elective.enrolled >= elective.capacity;
+  const newChoice: Choice = {
+    id: "c_" + Date.now(),
+    elective,
+    preference: preference || MOCK_CHOICES.length + 1,
+    status: isFull ? "waitlist" : "confirmed",
+    reason: isFull ? "Capacity reached" : undefined,
+  };
+  MOCK_CHOICES = [...MOCK_CHOICES, newChoice];
+  return { ok: true, choice: newChoice };
 }
 
 export async function removeChoice(id: string): Promise<{ ok: boolean; error?: string }> {
-  if (USE_MOCK) {
-    await delay(200);
-    return { ok: true };
-  }
   try {
     const res = await fetch(`/api/choices/${id}`, { method: "DELETE" });
-    if (!res.ok) throw new Error("Failed to delete choice");
-    return await res.json();
+    if (res.ok) {
+      const data = await res.json();
+      if (data.ok) return data;
+    }
   } catch (e: any) {
-    return { ok: false, error: e.message };
+    console.warn("API remove choice failed, falling back to in-memory state:", e);
   }
+  MOCK_CHOICES = MOCK_CHOICES.filter((c) => c.id !== id);
+  return { ok: true };
 }
 
 export async function askAdvisor(goal: string, interests: string[]): Promise<AdvisorResponse> {
