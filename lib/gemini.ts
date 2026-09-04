@@ -58,8 +58,8 @@ ${JSON.stringify(catalogSummary, null, 2)}
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-        "HTTP-Referer": "https://electiveos.edu",
-        "X-Title": "ElectiveOS Advisor",
+        "HTTP-Referer": "https://elective.edu",
+        "X-Title": "Elective Advisor",
       },
       body: JSON.stringify({
         model: MODEL_NAME,
@@ -80,11 +80,8 @@ ${JSON.stringify(catalogSummary, null, 2)}
 
     const data = await response.json();
     const rawContent = data.choices?.[0]?.message?.content || "{}";
-    
-    // Parse json
     const parsed = JSON.parse(rawContent);
 
-    // Hydrate seat_chance using clamp formula: clamp(round(100*(1-enrolled/capacity)), 5, 95)
     const electivesMap = new Map(catalog.map((c) => [c.title.toLowerCase(), c]));
 
     const recommendations = (parsed.recommendations || []).map((r: any) => {
@@ -108,10 +105,8 @@ ${JSON.stringify(catalogSummary, null, 2)}
 
     return { recommendations, rejected };
   } catch (err: any) {
-    console.error("AI Advisor generation fallback:", err.message);
+    console.error("AI Advisor fallback:", err.message);
 
-    // Resilient fallback rule-based matching if LLM network times out
-    const missingMl = !completedCourses.includes("Machine Learning Fundamentals");
     const recs: any[] = [];
     const rejs: any[] = [];
 
@@ -135,6 +130,82 @@ ${JSON.stringify(catalogSummary, null, 2)}
     return {
       recommendations: recs.slice(0, 3),
       rejected: rejs.slice(0, 2),
+    };
+  }
+}
+
+/**
+ * Conversational Chat with AI Advisor
+ */
+export async function generateAdvisorChat(
+  history: { role: "user" | "assistant"; content: string }[],
+  catalog: Elective[],
+  completedCourses: string[] = []
+): Promise<{ reply: string; suggestedElectives: Elective[] }> {
+  const catalogList = catalog.map((c) => ({
+    title: c.title,
+    dept: c.dept,
+    credits: c.credits,
+    prereqs: c.prereqs,
+    seatsLeft: c.capacity - c.enrolled,
+  }));
+
+  const systemPrompt = `You are "Elective Advisor" — an expert academic dean and curriculum counselor for university students.
+You talk in a friendly, concise, highly intelligent, and helpful tone.
+Student's Completed Coursework: ${JSON.stringify(completedCourses)}
+Available Electives Catalog: ${JSON.stringify(catalogList)}
+
+Rules:
+1. Advise students thoughtfully on which electives align with their career goals, interests, and workload.
+2. If a course has a prerequisite the student hasn't completed, explicitly alert them about the missing requirement.
+3. Keep responses structured and concise (under 150 words).
+4. When you recommend courses, list their EXACT titles in a section titled "SUGGESTED_COURSES:" with one per line so the UI can render interactive action buttons for them.`;
+
+  try {
+    const formattedMessages = [
+      { role: "system", content: systemPrompt },
+      ...history.map((h) => ({ role: h.role, content: h.content })),
+    ];
+
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+        "HTTP-Referer": "https://elective.edu",
+        "X-Title": "Elective Chat Advisor",
+      },
+      body: JSON.stringify({
+        model: MODEL_NAME,
+        messages: formattedMessages,
+        temperature: 0.3,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`OpenRouter chat error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const replyText = data.choices?.[0]?.message?.content || "I am happy to guide your elective choices!";
+
+    // Extract suggested electives
+    const suggested: Elective[] = [];
+    for (const c of catalog) {
+      if (replyText.toLowerCase().includes(c.title.toLowerCase())) {
+        if (!suggested.some((s) => s.id === c.id)) {
+          suggested.push(c);
+        }
+      }
+    }
+
+    return { reply: replyText, suggestedElectives: suggested.slice(0, 3) };
+  } catch (err: any) {
+    console.error("Chat advisor fallback:", err.message);
+    const firstMatch = catalog.find((c) => !c.prereqs.some((p) => !completedCourses.includes(p))) || catalog[0];
+    return {
+      reply: `Based on your academic profile, I recommend exploring **${firstMatch.title}** (${firstMatch.dept}). It provides strong foundational depth while fitting cleanly within your schedule!`,
+      suggestedElectives: [firstMatch],
     };
   }
 }

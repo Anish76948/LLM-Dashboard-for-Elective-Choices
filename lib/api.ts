@@ -306,6 +306,26 @@ export async function askAdvisor(goal: string, interests: string[]): Promise<Adv
   }
 }
 
+export async function chatWithAdvisor(
+  messages: { role: "user" | "assistant"; content: string }[]
+): Promise<{ reply: string; suggestedElectives: Elective[] }> {
+  try {
+    const res = await fetch("/api/advisor", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages }),
+    });
+    if (!res.ok) throw new Error("Chat request failed");
+    return await res.json();
+  } catch (e: any) {
+    console.warn("Chat advisor fallback:", e);
+    return {
+      reply: "I recommend exploring Deep Learning & Neural Networks or Cloud Native Architecture based on your major and credits!",
+      suggestedElectives: [MOCK_ELECTIVES[0], MOCK_ELECTIVES[1]],
+    };
+  }
+}
+
 export async function getAnalytics(): Promise<Analytics> {
   if (USE_MOCK) {
     await delay(200);

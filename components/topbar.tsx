@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { Search, Bell, LayoutGrid, Sparkles } from "lucide-react";
 import Link from "next/link";
+import { ModeToggle } from "@/components/mode-toggle";
 
 export function Topbar() {
   const pathname = usePathname();
@@ -55,9 +56,12 @@ export function Topbar() {
           </span>
         </button>
 
+        {/* Dark/Light Mode Toggle */}
+        <ModeToggle />
+
         {/* Quick CTA button */}
         <Link href="/advisor">
-          <button className="h-8 px-3.5 bg-zinc-900 hover:bg-black text-white text-xs font-semibold rounded-lg shadow-xs flex items-center gap-1.5 transition-all">
+          <button className="h-8 px-3.5 bg-zinc-900 hover:bg-black dark:bg-zinc-100 dark:hover:bg-white dark:text-zinc-900 text-white text-xs font-semibold rounded-lg shadow-xs flex items-center gap-1.5 transition-all">
             <Sparkles className="w-3.5 h-3.5 text-purple-300" />
             <span className="hidden sm:inline">Ask Advisor</span>
           </button>

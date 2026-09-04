@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { advisorRequestSchema } from "@/lib/schemas";
-import { generateAdvisorRecommendations } from "@/lib/gemini";
+import { generateAdvisorRecommendations, generateAdvisorChat } from "@/lib/gemini";
 import { Elective } from "@/lib/types";
 
 function mapElective(e: any): Elective {
@@ -25,17 +25,8 @@ function mapElective(e: any): Elective {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const parsed = advisorRequestSchema.safeParse(body);
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: parsed.error.issues[0]?.message || "Invalid input" },
-        { status: 400 }
-      );
-    }
 
-    const { goal, interests } = parsed.data;
-
-    // Determine student context
+    // Determine student context & completed courses
     let completedCourses: string[] = [];
     const authHeader = request.headers.get("authorization");
     if (authHeader?.startsWith("Bearer ")) {
@@ -47,17 +38,19 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // If still empty, check student1 fallback
     if (completedCourses.length === 0) {
+      // Check active demo cookie
+      const userCookie = request.cookies.get("electiveos_user")?.value;
+      const targetEmail = userCookie || "student1@demo.edu";
       const { data: demoStudent } = await supabaseAdmin
         .from("students")
         .select("completed_courses")
-        .eq("email", "student1@demo.edu")
+        .eq("email", targetEmail)
         .single();
       if (demoStudent?.completed_courses) completedCourses = demoStudent.completed_courses;
     }
 
-    // Fetch full catalog
+    // Fetch catalog
     const { data: rawElectives, error: dbErr } = await supabaseAdmin
       .from("electives")
       .select("*");
@@ -68,7 +61,22 @@ export async function POST(request: NextRequest) {
 
     const catalog = (rawElectives || []).map(mapElective);
 
-    // Generate recommendations via LLM
+    // If chat request
+    if (body.messages && Array.isArray(body.messages)) {
+      const chatResult = await generateAdvisorChat(body.messages, catalog, completedCourses);
+      return NextResponse.json(chatResult);
+    }
+
+    // Otherwise structured advisor evaluation
+    const parsed = advisorRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message || "Invalid input" },
+        { status: 400 }
+      );
+    }
+
+    const { goal, interests } = parsed.data;
     const advisorResponse = await generateAdvisorRecommendations(
       goal,
       interests,
