@@ -14,6 +14,7 @@ export function Topbar() {
   if (pathname === "/dashboard") pageName = "Overview";
   if (pathname === "/browse") pageName = "Electives Catalog";
   if (pathname === "/picks") pageName = "Ranked Picks";
+  if (pathname === "/profile") pageName = "Student Transcript";
   if (pathname === "/advisor") {
     section = "INTELLIGENCE";
     pageName = "Academic Advisor";

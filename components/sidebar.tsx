@@ -18,7 +18,8 @@ import {
   LogOut,
   Users,
   Compass,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Award
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -95,121 +96,180 @@ export function Sidebar() {
         <span className="font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight text-[15px]">Elective</span>
       </div>
 
-      {/* Navigation Sections */}
+      {/* Navigation Sections Isolated by Role */}
       <div className="flex-1 overflow-y-auto px-2 space-y-5 text-[13px]">
-        {/* Section 1: Overview */}
-        <div className="space-y-0.5">
-          <Link
-            href="/dashboard"
-            className={cn(
-              "flex items-center gap-3 px-3 py-2 rounded-xl font-medium transition-all duration-150",
-              pathname === "/dashboard"
-                ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-xs border border-zinc-200/70 dark:border-zinc-700"
-                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-white/60 dark:hover:bg-zinc-800/40"
-            )}
-          >
-            <Activity className="w-4 h-4 text-zinc-500" />
-            <span>Overview</span>
-          </Link>
+        {/* STUDENT NAVIGATION */}
+        {!isAdmin && !isFaculty && (
+          <>
+            <div className="space-y-0.5">
+              <div className="px-3 text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-1.5">
+                ACADEMICS
+              </div>
+              <Link
+                href="/dashboard"
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2 rounded-xl font-medium transition-all duration-150",
+                  pathname === "/dashboard"
+                    ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-xs border border-zinc-200/70 dark:border-zinc-700"
+                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-white/60 dark:hover:bg-zinc-800/40"
+                )}
+              >
+                <Activity className="w-4 h-4 text-zinc-500" />
+                <span>Overview</span>
+              </Link>
 
-          <Link
-            href="/browse"
-            className={cn(
-              "flex items-center gap-3 px-3 py-2 rounded-xl font-medium transition-all duration-150",
-              pathname === "/browse"
-                ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-xs border border-zinc-200/70 dark:border-zinc-700"
-                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-white/60 dark:hover:bg-zinc-800/40"
-            )}
-          >
-            <BookOpen className="w-4 h-4 text-zinc-500" />
-            <span>Electives Catalog</span>
-          </Link>
+              <Link
+                href="/browse"
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2 rounded-xl font-medium transition-all duration-150",
+                  pathname === "/browse"
+                    ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-xs border border-zinc-200/70 dark:border-zinc-700"
+                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-white/60 dark:hover:bg-zinc-800/40"
+                )}
+              >
+                <BookOpen className="w-4 h-4 text-zinc-500" />
+                <span>Electives Catalog</span>
+              </Link>
 
-          <Link
-            href="/picks"
-            className={cn(
-              "flex items-center justify-between px-3 py-2 rounded-xl font-medium transition-all duration-150",
-              pathname === "/picks"
-                ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-xs border border-zinc-200/70 dark:border-zinc-700"
-                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-white/60 dark:hover:bg-zinc-800/40"
-            )}
-          >
-            <div className="flex items-center gap-3">
-              <CheckSquare className="w-4 h-4 text-zinc-500" />
-              <span>My Picks</span>
+              <Link
+                href="/picks"
+                className={cn(
+                  "flex items-center justify-between px-3 py-2 rounded-xl font-medium transition-all duration-150",
+                  pathname === "/picks"
+                    ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-xs border border-zinc-200/70 dark:border-zinc-700"
+                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-white/60 dark:hover:bg-zinc-800/40"
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <CheckSquare className="w-4 h-4 text-zinc-500" />
+                  <span>My Picks</span>
+                </div>
+                <span className="text-[10px] bg-zinc-200/80 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold px-1.5 py-0.5 rounded-full">
+                  Ranked
+                </span>
+              </Link>
+
+              <Link
+                href="/profile"
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2 rounded-xl font-medium transition-all duration-150",
+                  pathname === "/profile"
+                    ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-xs border border-zinc-200/70 dark:border-zinc-700"
+                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-white/60 dark:hover:bg-zinc-800/40"
+                )}
+              >
+                <Award className="w-4 h-4 text-zinc-500" />
+                <span>Academic Transcript</span>
+              </Link>
             </div>
-            <span className="text-[10px] bg-zinc-200/80 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold px-1.5 py-0.5 rounded-full">
-              Ranked
-            </span>
-          </Link>
-        </div>
 
-        {/* Section 2: AI ADVISOR */}
-        <div className="space-y-1">
-          <div className="px-3 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
-            INTELLIGENCE
-          </div>
-          <Link
-            href="/advisor"
-            className={cn(
-              "flex items-center justify-between px-3 py-2 rounded-xl font-medium transition-all duration-150",
-              pathname === "/advisor"
-                ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-xs border border-zinc-200/70 dark:border-zinc-700"
-                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-white/60 dark:hover:bg-zinc-800/40"
-            )}
-          >
-            <div className="flex items-center gap-3">
-              <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-              <span>AI Advisor</span>
+            <div className="space-y-1">
+              <div className="px-3 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+                INTELLIGENCE
+              </div>
+              <Link
+                href="/advisor"
+                className={cn(
+                  "flex items-center justify-between px-3 py-2 rounded-xl font-medium transition-all duration-150",
+                  pathname === "/advisor"
+                    ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-xs border border-zinc-200/70 dark:border-zinc-700"
+                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-white/60 dark:hover:bg-zinc-800/40"
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                  <span>AI Advisor</span>
+                </div>
+                <span className="text-[9px] bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 font-bold px-1.5 py-0.5 rounded-md">
+                  MiniMax
+                </span>
+              </Link>
             </div>
-            <span className="text-[9px] bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 font-bold px-1.5 py-0.5 rounded-md">
-              MiniMax
-            </span>
-          </Link>
-        </div>
+          </>
+        )}
 
-        {/* Section 3: FACULTY */}
-        <div className="space-y-1">
-          <div className="px-3 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
-            FACULTY
-          </div>
-          <Link
-            href="/faculty"
-            className={cn(
-              "flex items-center justify-between px-3 py-2 rounded-xl font-medium transition-all duration-150",
-              pathname === "/faculty"
-                ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-xs border border-zinc-200/70 dark:border-zinc-700"
-                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-white/60 dark:hover:bg-zinc-800/40"
-            )}
-          >
-            <div className="flex items-center gap-3">
-              <GraduationCap className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <span>Instructor Portal</span>
+        {/* FACULTY NAVIGATION */}
+        {isFaculty && (
+          <div className="space-y-1">
+            <div className="px-3 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+              FACULTY PORTAL
             </div>
-            <span className="text-[9px] bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold px-1.5 py-0.5 rounded-md">
-              Waivers
-            </span>
-          </Link>
-        </div>
-
-        {/* Section 4: ADMINISTRATION */}
-        <div className="space-y-1">
-          <div className="px-3 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
-            GOVERNANCE
+            <Link
+              href="/faculty"
+              className={cn(
+                "flex items-center justify-between px-3 py-2 rounded-xl font-medium transition-all duration-150",
+                pathname === "/faculty"
+                  ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-xs border border-zinc-200/70 dark:border-zinc-700"
+                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-white/60 dark:hover:bg-zinc-800/40"
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <GraduationCap className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <span>Course Suite</span>
+              </div>
+              <span className="text-[9px] bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold px-1.5 py-0.5 rounded-md">
+                Waivers
+              </span>
+            </Link>
+            <Link
+              href="/browse"
+              className={cn(
+                "flex items-center gap-3 px-3 py-2 rounded-xl font-medium transition-all duration-150",
+                pathname === "/browse"
+                  ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-xs border border-zinc-200/70 dark:border-zinc-700"
+                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-white/60 dark:hover:bg-zinc-800/40"
+              )}
+            >
+              <BookOpen className="w-4 h-4 text-zinc-500" />
+              <span>Electives Catalog</span>
+            </Link>
           </div>
-          <Link
-            href="/admin"
-            className={cn(
-              "flex items-center gap-3 px-3 py-2 rounded-xl font-medium transition-all duration-150",
-              pathname === "/admin"
-                ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-xs border border-zinc-200/70 dark:border-zinc-700"
-                : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-white/60 dark:hover:bg-zinc-800/40"
-            )}
-          >
-            <BarChart3 className="w-4 h-4 text-zinc-500" />
-            <span>Allocations Ledger</span>
-          </Link>
-        </div>
+        )}
+
+        {/* ADMIN NAVIGATION */}
+        {isAdmin && (
+          <div className="space-y-1">
+            <div className="px-3 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+              GOVERNANCE
+            </div>
+            <Link
+              href="/admin"
+              className={cn(
+                "flex items-center gap-3 px-3 py-2 rounded-xl font-medium transition-all duration-150",
+                pathname === "/admin"
+                  ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-xs border border-zinc-200/70 dark:border-zinc-700"
+                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-white/60 dark:hover:bg-zinc-800/40"
+              )}
+            >
+              <BarChart3 className="w-4 h-4 text-zinc-500" />
+              <span>Allocations Ledger</span>
+            </Link>
+            <Link
+              href="/browse"
+              className={cn(
+                "flex items-center gap-3 px-3 py-2 rounded-xl font-medium transition-all duration-150",
+                pathname === "/browse"
+                  ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-xs border border-zinc-200/70 dark:border-zinc-700"
+                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-white/60 dark:hover:bg-zinc-800/40"
+              )}
+            >
+              <BookOpen className="w-4 h-4 text-zinc-500" />
+              <span>Electives Catalog</span>
+            </Link>
+            <Link
+              href="/dashboard"
+              className={cn(
+                "flex items-center gap-3 px-3 py-2 rounded-xl font-medium transition-all duration-150",
+                pathname === "/dashboard"
+                  ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 shadow-xs border border-zinc-200/70 dark:border-zinc-700"
+                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-white/60 dark:hover:bg-zinc-800/40"
+              )}
+            >
+              <Activity className="w-4 h-4 text-zinc-500" />
+              <span>Overview</span>
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Bottom Profile / Demo Switcher Card */}
